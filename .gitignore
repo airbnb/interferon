@@ -1,0 +1,13 @@
+config.json
+config.yaml
+
+.*sw?
+.DS_Store
+
+*.gem
+
+# Ruby env control
+.rvmrc*
+.ruby-version*
+.ruby-gemset*
+/.idea
