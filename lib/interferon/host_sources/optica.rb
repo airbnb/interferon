@@ -3,7 +3,7 @@ require 'json'
 
 module Interferon::HostSources
   class Optica
-    include Logging
+    include ::Interferon::Logging
 
     def initialize(options)
       raise ArgumentError, "missing host for optica source" \

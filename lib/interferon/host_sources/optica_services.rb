@@ -4,7 +4,7 @@ require 'set'
 
 module Interferon::HostSources
   class OpticaServices
-    include Logging
+    include ::Interferon::Logging
 
     def initialize(options)
       raise ArgumentError, "missing host for optica source" \

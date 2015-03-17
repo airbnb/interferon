@@ -3,7 +3,7 @@ require 'set'
 
 module Interferon::Destinations
   class Datadog
-    include Interferon::Logging
+    include ::Interferon::Logging
 
     attr_accessor :concurrency
     ALERT_KEY = 'This alert was created via the alerts framework'
