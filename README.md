@@ -1,5 +1,7 @@
 # Interferon #
 
+[![Build Status](https://travis-ci.org/airbnb/interferon.svg?branch=master)](https://travis-ci.org/airbnb/interferon)
+
 This repo contains the interferon gem.
 This gem enables you to store your alerts configuration in code.
 You should create your own repository, with a `Gemfile` which imports the interferon gem.
