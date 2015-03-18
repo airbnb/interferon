@@ -5,6 +5,9 @@ module Interferon::HostSources
   class Optica
     include ::Interferon::Logging
 
+    # this is here because we use this class to test dynamic loading in specs
+    DIR = 'interferon'
+
     def initialize(options)
       raise ArgumentError, "missing host for optica source" \
         unless options['host']

@@ -52,8 +52,7 @@ describe 'DynamicLoader' do
       loader = Interferon::HostSourcesLoader.new(['./spec/fixtures/loaders2'])
       klass = loader.get_klass('optica')
 
-      expect(klass).to be_a(Class)
-      expect{ klass::DIR }.to raise_error(NameError)
+      expect(klass::DIR).to eq('interferon')
     end
   end
 
