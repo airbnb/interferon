@@ -1,21 +1,8 @@
 require "spec_helper"
+require "helpers/loader_helper"
 
 describe 'DynamicLoader' do
   describe 'custom class retrieval' do
-    before do
-      # define the module we're working in
-      module ::Interferon::TestSources; end
-
-      # define a test loader we'll be using
-      class TestLoader < Interferon::DynamicLoader
-        def initialize_attributes
-          @loader_for = 'test fixtures'
-          @type_path = 'test_sources'
-          @module = ::Interferon::TestSources
-        end
-      end
-    end
-
     it 'properly loads a custom test source of given type' do
       test_loader = TestLoader.new(['./spec/fixtures/loaders'])
       expect(test_loader.get_klass('test_source')).to be_a(Class)
@@ -28,10 +15,10 @@ describe 'DynamicLoader' do
 
     it 'looks at custom paths in order' do
       test_loader = TestLoader.new(['./spec/fixtures/loaders', '/spec/fixtures/loaders2'])
-      expect(test_loader.get_klass('test_source')::DIR).to eq('loaders')
+      expect(test_loader.get_klass('order_test_source')::DIR).to eq('loaders')
 
       test_loader = TestLoader.new(['./spec/fixtures/loaders2', '/spec/fixtures/loaders'])
-      expect(test_loader.get_klass('test_source')::DIR).to eq('loaders2')
+      expect(test_loader.get_klass('order_test_source')::DIR).to eq('loaders2')
     end
 
     it 'eventually looks at all paths' do
@@ -53,6 +40,56 @@ describe 'DynamicLoader' do
       klass = loader.get_klass('optica')
 
       expect(klass::DIR).to eq('interferon')
+    end
+  end
+
+  describe 'get_all' do
+    let(:loader) { TestLoader.new(['./spec/fixtures/loaders2']) }
+    before do
+      require './spec/fixtures/loaders2/test_sources/test_source'
+      require './spec/fixtures/loaders2/test_sources/secondary_source'
+    end
+
+    it 'returns an instance for each enabled source' do
+      instances = loader.get_all(
+        [
+          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
+          {'type' => 'secondary_source', 'enabled' => true, 'options' => {}},
+        ])
+
+      expect(instances.count).to eq(2)
+      expect(instances).to contain_exactly(
+        an_instance_of(Interferon::TestSources::TestSource),
+        an_instance_of(Interferon::TestSources::SecondarySource))
+    end
+
+    it 'ignores non-enabled sources' do
+      instances = loader.get_all(
+        [
+          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
+          {'type' => 'secondary_source', 'enabled' => false, 'options' => {}},
+        ])
+
+      expect(instances.count).to eq(1)
+      expect(instances).to contain_exactly(an_instance_of(Interferon::TestSources::TestSource))
+    end
+
+    it 'ignores sources with no type set' do
+      instances = loader.get_all(
+        [
+          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
+          {'enabled' => true, 'options' => {}},
+        ])
+
+      expect(instances.count).to eq(1)
+      expect(instances).to contain_exactly(an_instance_of(Interferon::TestSources::TestSource))
+    end
+
+    it 'properly sets options on classes it instantiates' do
+      instances = loader.get_all(
+        [{'type' => 'test_source', 'enabled' => true, 'options' => {'testval' => 5}}])
+
+      expect(instances[0].testval).to eq(5)
     end
   end
 

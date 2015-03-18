@@ -2,6 +2,7 @@
 
 # require the thing we're testing
 require 'interferon'
+require 'helpers/logging_helper.rb'
 
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 RSpec.configure do |config|
