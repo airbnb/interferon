@@ -30,7 +30,7 @@ It accepts the following parameters:
 * `host_sources` -- a list of sources which can read inventory systems and return lists of hosts to monitor
 * `destinations` -- a list of alerting providers, which can monitor metrics and dispatch alerts as specified in your alerts dsl files
 
-For more information, see [config.example.yaml](blob/master/config.example.yaml) file in this repo.
+For more information, see [config.example.yaml](config.example.yaml) file in this repo.
 
 ## The Moving Parts ##
 
