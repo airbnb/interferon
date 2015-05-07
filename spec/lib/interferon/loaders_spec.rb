@@ -30,14 +30,14 @@ describe 'DynamicLoader' do
   describe 'standard class retrieval' do
     it 'loads a class from a specified location when possible' do
       loader = Interferon::HostSourcesLoader.new(['./spec/fixtures/loaders'])
-      klass = loader.get_klass('optica')
+      klass = loader.get_klass('test_host_source')
 
       expect(klass::DIR).to eq('loaders')
     end
 
     it 'falls back to internal classes' do
       loader = Interferon::HostSourcesLoader.new(['./spec/fixtures/loaders2'])
-      klass = loader.get_klass('optica')
+      klass = loader.get_klass('test_host_source')
 
       expect(klass::DIR).to eq('interferon')
     end

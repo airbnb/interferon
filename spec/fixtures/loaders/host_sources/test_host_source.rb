@@ -1,5 +1,5 @@
 module ::Interferon::HostSources
-  class Optica
+  class TestHostSource
     DIR = 'loaders'
   end
 end
