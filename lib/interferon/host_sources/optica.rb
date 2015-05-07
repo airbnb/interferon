@@ -5,9 +5,6 @@ module Interferon::HostSources
   class Optica
     include ::Interferon::Logging
 
-    # this is here because we use this class to test dynamic loading in specs
-    DIR = 'interferon'
-
     def initialize(options)
       raise ArgumentError, "missing host for optica source" \
         unless options['host']
@@ -17,14 +14,7 @@ module Interferon::HostSources
     end
 
     def list_hosts
-      con = Net::HTTP.new(@host, @port)
-      con.read_timeout = 60
-      con.open_timeout = 60
-
-      response = con.get('/')
-      data = JSON::parse(response.body)
-
-      return data['nodes'].map{|ip, host| {
+      return optica_data['nodes'].map{|ip, host| {
           :source => 'optica',
           :hostname => host['hostname'],
           :role => host['role'],
@@ -33,6 +23,17 @@ module Interferon::HostSources
           :owners => host['ownership'] && host['ownership']['people'] || [],
           :owner_groups => host['ownership'] && host['ownership']['groups'] || [],
         }}
+    end
+
+    def optica_data
+      @optica_data ||= begin
+        con = Net::HTTP.new(@host, @port)
+        con.read_timeout = 60
+        con.open_timeout = 60
+
+        response = con.get('/')
+        JSON::parse(response.body)
+      end
     end
   end
 end

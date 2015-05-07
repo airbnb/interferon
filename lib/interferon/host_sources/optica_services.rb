@@ -15,14 +15,18 @@ module Interferon::HostSources
       @envs = options['environments'] || []
     end
 
+    def optica_data
+      @optica_data ||= begin
+        con = Net::HTTP.new(@host, @port)
+        con.read_timeout = 60
+        con.open_timeout = 60
+
+        response = con.get('/')
+        JSON::parse(response.body)
+      end
+    end
+
     def list_hosts
-      con = Net::HTTP.new(@host, @port)
-      con.read_timeout = 60
-      con.open_timeout = 60
-
-      response = con.get('/')
-      data = JSON::parse(response.body)
-
       services = Hash.new{ |h,service| h[service] = {
           :source => 'optica_services',
           :service => service,
@@ -34,7 +38,7 @@ module Interferon::HostSources
           :provider_machine_count => 0,
         }}
 
-      data['nodes'].each do |ip, host|
+      optica_data['nodes'].each do |ip, host|
         next unless @envs.empty? or @envs.include?(host['environment'])
 
         # make it easier by initializing possibly-missing data to sane defaults
