@@ -31,8 +31,8 @@ module Interferon::HostSources
           :source => 'optica_services',
           :service => service,
 
-          :owners => [],
-          :owner_groups => [],
+          :owners => Set.new,
+          :owner_groups => Set.new,
           :consumer_roles => Set.new,
           :consumer_machine_count => 0,
           :provider_machine_count => 0,
@@ -50,8 +50,8 @@ module Interferon::HostSources
         host['nerve_services'].each do |service|
           services[service][:provider_machine_count] += 1
 
-          services[service][:owners].concat(host['ownership']['people'] || [])
-          services[service][:owner_groups].concat(host['ownership']['groups'] || [])
+          services[service][:owners].merge(host['ownership']['people'] || [])
+          services[service][:owner_groups].merge(host['ownership']['groups'] || [])
         end
 
         # consumer info
@@ -63,6 +63,8 @@ module Interferon::HostSources
 
       # convert all sets to arrays
       services.each do |k,v|
+        services[k][:owners] = v[:owners].to_a
+        services[k][:owner_groups] = v[:owner_groups].to_a
         services[k][:consumer_roles] = v[:consumer_roles].to_a
       end
 
