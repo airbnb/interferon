@@ -103,41 +103,39 @@ module Interferon::Destinations
       end
 
       # log whenever we've encountered errors
-      if resp
-        code = resp[0].to_i
+      code = @dry_run ? 200 : resp[0].to_i
 
-        # client error
-        if code == 400
-          statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.client_error', 1, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
+      # client error
+      if code == 400
+        statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.client_error', 1, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
 
-          @stats[:api_client_errors] += 1
-          log.error("client error while #{action} alert '#{alert['name']}';" \
-              " query was '#{alert['metric']['datadog_query'].strip}'")
+        @stats[:api_client_errors] += 1
+        log.error("client error while #{action} alert '#{alert['name']}';" \
+            " query was '#{alert['metric']['datadog_query'].strip}'")
 
-        # unknown (prob. datadog) error:
-        elsif code >= 400 || code == -1
-          statsd.gauge('datadog.api.unknown_error', 1, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
+      # unknown (prob. datadog) error:
+      elsif code >= 400 || code == -1
+        statsd.gauge('datadog.api.unknown_error', 1, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
 
-          @stats[:api_unknown_errors] += 1
-          log.error("unknown error while #{action} alert '#{alert['name']}':" \
-              " query was '#{alert['metric']['datadog_query'].strip}'" \
-              " response was #{resp[0]}:'#{resp[1].inspect}'")
+        @stats[:api_unknown_errors] += 1
+        log.error("unknown error while #{action} alert '#{alert['name']}':" \
+            " query was '#{alert['metric']['datadog_query'].strip}'" \
+            " response was #{resp[0]}:'#{resp[1].inspect}'")
 
-        # assume this was a success
-        else
-          statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
-          statsd.gauge('datadog.api.success', 1, :tags => ["alert:#{alert}"])
+      # assume this was a success
+      else
+        statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
+        statsd.gauge('datadog.api.success', 1, :tags => ["alert:#{alert}"])
 
-          @stats[:api_successes] += 1
-          @stats[:alerts_created] += 1 if action == :creating
-          @stats[:alerts_updated] += 1 if action == :updating
-          @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
-        end
+        @stats[:api_successes] += 1
+        @stats[:alerts_created] += 1 if action == :creating
+        @stats[:alerts_updated] += 1 if action == :updating
+        @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
       end
 
       # lets key alerts by their name
