@@ -1,5 +1,7 @@
 config.json
 config.yaml
+config.yml
+Gemfile.lock
 
 .*sw?
 .DS_Store
