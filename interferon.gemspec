@@ -17,7 +17,7 @@ Gem::Specification.new do |gem|
   gem.executables   = gem.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
   gem.test_files    = gem.files.grep(%r{^(test|spec|features)/})
 
-  gem.add_runtime_dependency "dogapi", "~> 1.11", ">= 1.11.1"
+  gem.add_runtime_dependency "dogapi", "~> 1.20", ">= 1.20"
   gem.add_runtime_dependency "aws-sdk", "~> 1.35", ">= 1.35.1"
   gem.add_runtime_dependency "dogstatsd-ruby", "~> 1.4", ">= 1.4.1"
 
