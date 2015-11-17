@@ -18,7 +18,7 @@ module Interferon::GroupSources
           next
         end
 
-        Dir.glob(File.join(path, '*.{json,yaml}')) do |group_file|
+        Dir.glob(File.join(path, '*.{json,yml,yaml}')) do |group_file|
           begin
             group = YAML::parse(File.read(group_file))
           rescue YAML::SyntaxError => e
