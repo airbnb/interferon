@@ -4,11 +4,11 @@ module Interferon::HostSources
   class AwsRds
     def initialize(options)
       missing = %w{access_key_id secret_access_key}.reject{|r| options.key?(r)}
-      raise ArgumentError, "missing these required arguments for source AwsRds: #{missing.inspect}"\
-        unless missing.empty?
 
-      @access_key_id = options['access_key_id']
-      @secret_access_key = options['secret_access_key']
+      AWS.config({
+          :access_key_id => options['access_key_id'],
+          :secret_access_key => options['secret_access_key']
+      }) if missing.empty?
 
       # initialize a list of regions to check
       if options['regions'] && !options['regions'].empty?
@@ -22,10 +22,7 @@ module Interferon::HostSources
       hosts = []
 
       @regions.each do |region|
-        rds = AWS::RDS.new(
-          :access_key_id => @access_key_id,
-          :secret_access_key => @secret_access_key,
-          :region => region)
+        rds = AWS::RDS.new(:region => region)
 
         AWS.memoize do
           rds.instances.each do |instance|
