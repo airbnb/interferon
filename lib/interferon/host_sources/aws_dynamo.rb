@@ -4,11 +4,11 @@ module Interferon::HostSources
   class AwsDynamo
     def initialize(options)
       missing = %w{access_key_id secret_access_key}.reject{|r| options.key?(r)}
-      raise ArgumentError, "missing these required arguments for source AwsDynamo: #{missing.inspect}"\
-        unless missing.empty?
 
-      @access_key_id = options['access_key_id']
-      @secret_access_key = options['secret_access_key']
+      AWS.config({
+          :access_key_id => options['access_key_id'],
+          :secret_access_key => options['secret_access_key']
+      }) if missing.empty?
 
       # initialize a list of regions to check
       if options['regions'] && !options['regions'].empty?
@@ -22,10 +22,7 @@ module Interferon::HostSources
       hosts = []
 
       @regions.each do |region|
-        client = AWS::DynamoDB.new(
-          :access_key_id => @access_key_id,
-          :secret_access_key => @secret_access_key,
-          :region => region)
+        client = AWS::DynamoDB.new(:region => region)
 
         AWS.memoize do
           client.tables.each do |table|
