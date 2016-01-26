@@ -39,7 +39,7 @@ module Interferon
 
       alerts = read_alerts
       groups = read_groups(@groups_sources)
-      hosts = read_hosts(@host_sources) unless @request_shutdown
+      hosts = read_hosts(@host_sources)
 
       # make sure destinations know if it's a dry run
       @destinations.each do |dest|
@@ -47,7 +47,7 @@ module Interferon
         dest['options']['dry_run'] = dry_run
       end
 
-      update_alerts(@destinations, hosts, alerts, groups) unless @request_shutdown
+      update_alerts(@destinations, hosts, alerts, groups)
 
       if @request_shutdown
         log.info "interferon #{run_desc} shut down by SIGTERM"
