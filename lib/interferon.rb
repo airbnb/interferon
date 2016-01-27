@@ -221,23 +221,26 @@ module Interferon
         # flush queue
         alerts_to_create = alerts_queue.keys
         concurrency = dest.concurrency || 10
-        threads = concurrency.times.map do
-          t = Thread.new do
-            while name = alerts_to_create.shift
-              break if @request_shutdown
-              cur_alert, people = alerts_queue[name]
+        unless @request_shutdown
+          threads = concurrency.times.map do |i|
+            log.info "thread #{i} created"
+            t = Thread.new do
+              while name = alerts_to_create.shift
+                break if @request_shutdown
+                cur_alert, people = alerts_queue[name]
 
-              log.debug "creating alert for #{cur_alert[:name]}"
-              alert_key = dest.create_alert(cur_alert, people)
+                log.debug "creating alert for #{cur_alert[:name]}"
+                alert_key = dest.create_alert(cur_alert, people)
 
-              # don't delete alerts we still have defined
-              existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
+                # don't delete alerts we still have defined
+                existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
+              end
             end
+            t.abort_on_exception = true
+            t
           end
-          t.abort_on_exception = true
-          t
+          threads.map(&:join)
         end
-        threads.map(&:join)
 
         # remove existing alerts that shouldn't exist
         to_delete = existing_alerts.reject{ |key, existing_alert| existing_alert['still_exists'] }
