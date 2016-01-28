@@ -26,9 +26,14 @@ module Interferon
       @groups_sources = groups_sources
       @host_sources = host_sources
       @destinations = destinations
+      @request_shutdown = false
     end
 
     def run(dry_run = false)
+      Signal.trap("TERM") do
+        log.info "SIGTERM received. shutting down gracefully..."
+        @request_shutdown = true
+      end
       run_desc = dry_run ? 'dry run' : 'run'
       log.info "beginning alerts #{run_desc}"
 
@@ -44,7 +49,11 @@ module Interferon
 
       update_alerts(@destinations, hosts, alerts, groups)
 
-      log.info "interferon #{run_desc} complete"
+      if @request_shutdown
+        log.info "interferon #{run_desc} shut down by SIGTERM"
+      else
+        log.info "interferon #{run_desc} complete"
+      end
     end
 
     def read_alerts
@@ -57,6 +66,7 @@ module Interferon
         unless Dir.exists?(path)
 
       Dir.glob(File.join(path, '*.rb')) do |alert_file|
+        break if @request_shutdown
         begin
           alert = Alert.new(alert_file)
         rescue StandardError => e
@@ -80,6 +90,7 @@ module Interferon
       groups = {}
       loader = GroupSourcesLoader.new([@alerts_repo_path])
       loader.get_all(sources).each do |source|
+        break if @request_shutdown
         source_groups = source.list_groups
 
         # add all people to groups
@@ -108,6 +119,7 @@ module Interferon
       hosts = []
       loader = HostSourcesLoader.new([@alerts_repo_path])
       loader.get_all(sources).each do |source|
+        break if @request_shutdown
         source_hosts = source.list_hosts
         hosts << source_hosts
 
@@ -124,6 +136,7 @@ module Interferon
     def update_alerts(destinations, hosts, alerts, groups)
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
+        break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
 
         # track some counters/stats per destination
@@ -136,6 +149,7 @@ module Interferon
         # create or update alerts; mark when we've done that
         alerts_queue = Hash.new
         alerts.each do |alert|
+          break if @request_shutdown
           counters = {
             :errors => 0,
             :evals => 0,
@@ -207,34 +221,43 @@ module Interferon
         # flush queue
         alerts_to_create = alerts_queue.keys
         concurrency = dest.concurrency || 10
-        threads = concurrency.times.map do
-          t = Thread.new do
-            while name = alerts_to_create.shift
-              cur_alert, people = alerts_queue[name]
+        unless @request_shutdown
+          threads = concurrency.times.map do |i|
+            log.info "thread #{i} created"
+            t = Thread.new do
+              while name = alerts_to_create.shift
+                break if @request_shutdown
+                cur_alert, people = alerts_queue[name]
 
-              log.debug "creating alert for #{cur_alert[:name]}"
-              alert_key = dest.create_alert(cur_alert, people)
+                log.debug "creating alert for #{cur_alert[:name]}"
+                alert_key = dest.create_alert(cur_alert, people)
 
-              # don't delete alerts we still have defined
-              existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
+                # don't delete alerts we still have defined
+                existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
+              end
             end
+            t.abort_on_exception = true
+            t
           end
-          t.abort_on_exception = true
-          t
+          threads.map(&:join)
         end
-        threads.map(&:join)
 
         # remove existing alerts that shouldn't exist
         to_delete = existing_alerts.reject{ |key, existing_alert| existing_alert['still_exists'] }
-        to_delete.each{ |key, alert| dest.remove_alert(alert) }
+        to_delete.each do |key, alert|
+          break if @request_shutdown
+          dest.remove_alert(alert)
+        end
 
-        # run time summary
-        run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
-        log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
+        unless @request_shutdown
+          # run time summary
+          run_time = Time.new.to_f - start_time
+          statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
+          log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
 
-        # report destination stats
-        dest.report_stats
+          # report destination stats
+          dest.report_stats
+        end
       end
     end
   end
