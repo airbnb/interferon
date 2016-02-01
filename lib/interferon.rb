@@ -18,6 +18,8 @@ module Interferon
     include Logging
     attr_accessor :host_sources, :destinations, :host_info
 
+    DRY_RUN_ALERTS_NAME_PREFIX = '[-dry-run-]'
+
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similiar hash from type => options for each alerter
@@ -41,13 +43,11 @@ module Interferon
       groups = read_groups(@groups_sources)
       hosts = read_hosts(@host_sources)
 
-      # make sure destinations know if it's a dry run
       @destinations.each do |dest|
         dest['options'] ||= {}
-        dest['options']['dry_run'] = dry_run
       end
 
-      update_alerts(@destinations, hosts, alerts, groups)
+      update_alerts(@destinations, hosts, alerts, groups, dry_run)
 
       if @request_shutdown
         log.info "interferon #{run_desc} shut down by SIGTERM"
@@ -133,12 +133,59 @@ module Interferon
       return hosts
     end
 
-    def update_alerts(destinations, hosts, alerts, groups)
+    def update_alerts(destinations, hosts, alerts, groups, dry_run)
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
-        update_alerts_on_destination(dest, hosts, alerts, groups)
+        if dry_run
+          dry_run_update_alerts_on_destination(dest, hosts, alerts, groups)
+        else
+          update_alerts_on_destination(dest, hosts, alerts, groups)
+        end
+      end
+    end
+
+    def dry_run_update_alerts_on_destination(dest, hosts, alerts, groups)
+      # track some counters/stats per destination
+      start_time = Time.new.to_f
+
+      # get already-defined alerts
+      existing_alerts = dest.existing_alerts.dup
+      existing_alerts.each{ |key, existing_alert| existing_alert['still_exists'] = false }
+
+      to_remove = existing_alerts.reject{|key, a| !key.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)}
+
+      alerts_queue = build_alerts_queue(hosts, alerts, groups)
+
+      alerts_queue.reject!{|name, pair| !Interferon::need_dry_run(pair[0], existing_alerts)}
+      alerts_queue.each do |name, pair|
+        alert = pair[0]
+        alert.change_name(DRY_RUN_ALERTS_NAME_PREFIX + alert['name'])
+      end
+
+      # flush queue
+      created_alerts_key_ids = create_alerts(dest, alerts_queue)
+      created_alerts_ids = created_alerts_key_ids.map{|a| a[1]}
+      to_remove_ids = to_remove.empty? ? [] : to_remove.map{|a| a['id']}
+      # remove existing alerts that shouldn't exist
+      (created_alerts_ids + to_remove_ids).each do |id|
+        break if @request_shutdown
+        dest.remove_alert_by_id(id) unless id.nil?
+      end
+
+      unless @request_shutdown
+        # run time summary
+        run_time = Time.new.to_f - start_time
+        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}", "dry_run:true"])
+        log.info "#{dest.class.name} : dry run completed in %.2f seconds" % (run_time)
+
+        # report destination stats
+        dest.report_stats
+      end
+
+      if !dest.api_errors.empty?
+        raise dest.api_errors.to_s
       end
     end
 
@@ -153,7 +200,7 @@ module Interferon
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
 
       # flush queue
-      created_alerts_keys = create_alerts(dest, alerts_queue)
+      created_alerts_keys = create_alerts(dest, alerts_queue).map{|a| a[0]}
       created_alerts_keys.each do |alert_key|
         # don't delete alerts we still have defined
         existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
@@ -169,7 +216,7 @@ module Interferon
       unless @request_shutdown
         # run time summary
         run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
+        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}", "dry_run:false"])
         log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
 
         # report destination stats
@@ -178,7 +225,7 @@ module Interferon
     end
 
     def create_alerts(dest, alerts_queue)
-      alert_keys = []
+      alert_key_ids = []
       alerts_to_create = alerts_queue.keys
       concurrency = dest.concurrency || 10
       unless @request_shutdown
@@ -188,17 +235,15 @@ module Interferon
             while name = alerts_to_create.shift
               break if @request_shutdown
               cur_alert, people = alerts_queue[name]
-
               log.debug "creating alert for #{cur_alert[:name]}"
-              alert_key = dest.create_alert(cur_alert, people)
-              alert_keys << alert_key
+              alert_key_ids << dest.create_alert(cur_alert, people)
             end
           end
           t.abort_on_exception = true
           t
         end
         threads.map(&:join)
-        alert_keys
+        alert_key_ids
       end
     end
 
@@ -233,7 +278,6 @@ module Interferon
           end
 
           counters[:applies] += 1
-
           # don't define alerts twice
           next if alerts_queue.key?(alert[:name])
 
@@ -275,6 +319,25 @@ module Interferon
         end
       end
       alerts_queue
+    end
+
+    def self.need_dry_run(alert, existing_alerts)
+      existing = existing_alerts[alert['name']]
+      if existing.nil?
+        true
+      else
+        !same_alerts_for_dry_run_purpose(alert, existing)
+      end
+    end
+
+    def self.same_alerts_for_dry_run_purpose(alert_one, alert_two)
+      attributes_to_compare = ['silenced', 'silenced_until', 'notify_no_data', 'no_data_timeframe', 'timeout', 'applies']
+      attributes_to_compare.each do |key|
+        if alert_one[key] != alert_two[key]
+          return false
+        end
+      end
+      return alert_one['metric']['datadog_query'] == alert_two['metric']['datadog_query']
     end
   end
 end
