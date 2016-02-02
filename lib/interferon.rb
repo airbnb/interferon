@@ -138,127 +138,143 @@ module Interferon
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
+        update_alerts_on_destination(dest, hosts, alerts, groups)
+      end
+    end
 
-        # track some counters/stats per destination
-        start_time = Time.new.to_f
+    def update_alerts_on_destination(dest, hosts, alerts, groups)
+      # track some counters/stats per destination
+      start_time = Time.new.to_f
 
-        # get already-defined alerts
-        existing_alerts = dest.existing_alerts.dup
-        existing_alerts.each{ |key, existing_alert| existing_alert['still_exists'] = false }
+      # get already-defined alerts
+      existing_alerts = dest.existing_alerts.dup
+      existing_alerts.each{ |key, existing_alert| existing_alert['still_exists'] = false }
 
-        # create or update alerts; mark when we've done that
-        alerts_queue = Hash.new
-        alerts.each do |alert|
-          break if @request_shutdown
-          counters = {
-            :errors => 0,
-            :evals => 0,
-            :applies => 0,
-            :hosts => hosts.length
-          }
-          last_eval_error = nil
+      alerts_queue = build_alerts_queue(hosts, alerts, groups)
 
-          hosts.each do |hostinfo|
-            begin
-              alert.evaluate(hostinfo)
-              counters[:evals] += 1
-            rescue StandardError => e
-              log.debug "Evaluation of alert #{alert} failed in the context of host #{hostinfo}"
-              counters[:errors] += 1
-              last_eval_error = e
-              next
+      # flush queue
+      created_alerts_keys = create_alerts(dest, alerts_queue)
+      created_alerts_keys.each do |alert_key|
+        # don't delete alerts we still have defined
+        existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
+      end
+
+      # remove existing alerts that shouldn't exist
+      to_delete = existing_alerts.reject{ |key, existing_alert| existing_alert['still_exists'] }
+      to_delete.each do |key, alert|
+        break if @request_shutdown
+        dest.remove_alert(alert)
+      end
+
+      unless @request_shutdown
+        # run time summary
+        run_time = Time.new.to_f - start_time
+        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
+        log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
+
+        # report destination stats
+        dest.report_stats
+      end
+    end
+
+    def create_alerts(dest, alerts_queue)
+      alert_keys = []
+      alerts_to_create = alerts_queue.keys
+      concurrency = dest.concurrency || 10
+      unless @request_shutdown
+        threads = concurrency.times.map do |i|
+          log.info "thread #{i} created"
+          t = Thread.new do
+            while name = alerts_to_create.shift
+              break if @request_shutdown
+              cur_alert, people = alerts_queue[name]
+
+              log.debug "creating alert for #{cur_alert[:name]}"
+              alert_key = dest.create_alert(cur_alert, people)
+              alert_keys << alert_key
             end
+          end
+          t.abort_on_exception = true
+          t
+        end
+        threads.map(&:join)
+        alert_keys
+      end
+    end
 
-            # don't define an alert that doesn't apply to this hostinfo
-            unless alert[:applies]
-              log.debug "alert #{alert[:name]} doesn't apply to #{hostinfo.inspect}"
-              next
-            end
+    def build_alerts_queue(hosts, alerts, groups)
+      # create or update alerts; mark when we've done that
+      alerts_queue = Hash.new
+      alerts.each do |alert|
+        break if @request_shutdown
+        counters = {
+          :errors => 0,
+          :evals => 0,
+          :applies => 0,
+          :hosts => hosts.length
+        }
+        last_eval_error = nil
 
-            counters[:applies] += 1
-
-            # don't define alerts twice
-            next if alerts_queue.key?(alert[:name])
-
-            # figure out who to notify
-            people = Set.new(alert[:notify][:people])
-            alert[:notify][:groups].each do |g|
-              people += (groups[g] || [])
-            end
-
-            # queue the alert up for creation; we clone the alert to save the current state
-            alerts_queue[alert[:name]] ||= [alert.clone, people]
+        hosts.each do |hostinfo|
+          begin
+            alert.evaluate(hostinfo)
+            counters[:evals] += 1
+          rescue StandardError => e
+            log.debug "Evaluation of alert #{alert} failed in the context of host #{hostinfo}"
+            counters[:errors] += 1
+            last_eval_error = e
+            next
           end
 
-          # log some of the counters
-          statsd.gauge('alerts.evaluate.errors', counters[:errors], :tags => ["alert:#{alert}"])
-          statsd.gauge('alerts.evaluate.applies', counters[:applies], :tags => ["alert:#{alert}"])
-
-          if counters[:applies] > 0
-            log.info "alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts"
+          # don't define an alert that doesn't apply to this hostinfo
+          unless alert[:applies]
+            log.debug "alert #{alert[:name]} doesn't apply to #{hostinfo.inspect}"
+            next
           end
 
-          # did the alert fail to evaluate on all hosts?
-          if counters[:errors] == counters[:hosts]
-            log.error "alert #{alert} failed to evaluate in the context of all hosts!"
-            log.error "last error on alert #{alert}: #{last_eval_error}"
+          counters[:applies] += 1
 
-            statsd.gauge('alerts.evaluate.failed_on_all', 1, :tags => ["alert:#{alert}"])
-            log.debug "alert #{alert}: error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
-          else
-            statsd.gauge('alerts.evaluate.failed_on_all', 0, :tags => ["alert:#{alert}"])
+          # don't define alerts twice
+          next if alerts_queue.key?(alert[:name])
+
+          # figure out who to notify
+          people = Set.new(alert[:notify][:people])
+          alert[:notify][:groups].each do |g|
+            people += (groups[g] || [])
           end
 
-          # did the alert apply to any hosts?
-          if counters[:applies] == 0
-            statsd.gauge('alerts.evaluate.never_applies', 1, :tags => ["alert:#{alert}"])
-            log.warn "alert #{alert} did not apply to any hosts"
-          else
-            statsd.gauge('alerts.evaluate.never_applies', 0, :tags => ["alert:#{alert}"])
-          end
+          # queue the alert up for creation; we clone the alert to save the current state
+          alerts_queue[alert[:name]] ||= [alert.clone, people]
         end
 
-        # flush queue
-        alerts_to_create = alerts_queue.keys
-        concurrency = dest.concurrency || 10
-        unless @request_shutdown
-          threads = concurrency.times.map do |i|
-            log.info "thread #{i} created"
-            t = Thread.new do
-              while name = alerts_to_create.shift
-                break if @request_shutdown
-                cur_alert, people = alerts_queue[name]
+        # log some of the counters
+        statsd.gauge('alerts.evaluate.errors', counters[:errors], :tags => ["alert:#{alert}"])
+        statsd.gauge('alerts.evaluate.applies', counters[:applies], :tags => ["alert:#{alert}"])
 
-                log.debug "creating alert for #{cur_alert[:name]}"
-                alert_key = dest.create_alert(cur_alert, people)
-
-                # don't delete alerts we still have defined
-                existing_alerts[alert_key]['still_exists'] = true if existing_alerts.include?(alert_key)
-              end
-            end
-            t.abort_on_exception = true
-            t
-          end
-          threads.map(&:join)
+        if counters[:applies] > 0
+          log.info "alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts"
         end
 
-        # remove existing alerts that shouldn't exist
-        to_delete = existing_alerts.reject{ |key, existing_alert| existing_alert['still_exists'] }
-        to_delete.each do |key, alert|
-          break if @request_shutdown
-          dest.remove_alert(alert)
+        # did the alert fail to evaluate on all hosts?
+        if counters[:errors] == counters[:hosts]
+          log.error "alert #{alert} failed to evaluate in the context of all hosts!"
+          log.error "last error on alert #{alert}: #{last_eval_error}"
+
+          statsd.gauge('alerts.evaluate.failed_on_all', 1, :tags => ["alert:#{alert}"])
+          log.debug "alert #{alert}: error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
+        else
+          statsd.gauge('alerts.evaluate.failed_on_all', 0, :tags => ["alert:#{alert}"])
         end
 
-        unless @request_shutdown
-          # run time summary
-          run_time = Time.new.to_f - start_time
-          statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
-          log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
-
-          # report destination stats
-          dest.report_stats
+        # did the alert apply to any hosts?
+        if counters[:applies] == 0
+          statsd.gauge('alerts.evaluate.never_applies', 1, :tags => ["alert:#{alert}"])
+          log.warn "alert #{alert} did not apply to any hosts"
+        else
+          statsd.gauge('alerts.evaluate.never_applies', 0, :tags => ["alert:#{alert}"])
         end
       end
+      alerts_queue
     end
   end
 end
