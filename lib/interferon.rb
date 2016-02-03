@@ -243,8 +243,8 @@ module Interferon
           t
         end
         threads.map(&:join)
-        alert_key_ids
       end
+      alert_key_ids
     end
 
     def build_alerts_queue(hosts, alerts, groups)
