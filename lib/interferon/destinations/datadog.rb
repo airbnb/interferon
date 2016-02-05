@@ -35,7 +35,6 @@ module Interferon::Destinations
 
     def api_errors
       @api_errors ||= []
-      @api_errors
     end
 
     def existing_alerts
@@ -109,7 +108,7 @@ module Interferon::Destinations
       # log whenever we've encountered errors
       code = resp[0].to_i
       if code != 200
-        @api_errors << "#{code.to_s} on alert #{alert['name']}"
+        api_errors << "#{code.to_s} on alert #{alert['name']}"
       end
 
       # client error

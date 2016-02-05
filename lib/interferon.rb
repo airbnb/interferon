@@ -152,12 +152,8 @@ module Interferon
 
       # get already-defined alerts
       existing_alerts = dest.existing_alerts.dup
-      existing_alerts.each{ |key, existing_alert| existing_alert['still_exists'] = false }
-
       to_remove = existing_alerts.reject{|key, a| !key.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)}
-
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-
       alerts_queue.reject!{|name, pair| !Interferon::need_dry_run(pair[0], existing_alerts)}
       alerts_queue.each do |name, pair|
         alert = pair[0]
@@ -321,8 +317,8 @@ module Interferon
       alerts_queue
     end
 
-    def self.need_dry_run(alert, existing_alerts)
-      existing = existing_alerts[alert['name']]
+    def self.need_dry_run(alert, existing_alerts_from_api)
+      existing = existing_alerts_from_api[alert['name']]
       if existing.nil?
         true
       else
@@ -330,14 +326,12 @@ module Interferon
       end
     end
 
-    def self.same_alerts_for_dry_run_purpose(alert_one, alert_two)
-      attributes_to_compare = ['silenced', 'silenced_until', 'notify_no_data', 'no_data_timeframe', 'timeout', 'applies']
-      attributes_to_compare.each do |key|
-        if alert_one[key] != alert_two[key]
-          return false
-        end
-      end
-      return alert_one['metric']['datadog_query'] == alert_two['metric']['datadog_query']
+    def self.same_alerts_for_dry_run_purpose(alert, alert_api_json)
+      query1 = alert['metric']['datadog_query']
+      query2 = alert_api_json['query']
+      query1.strip!
+      query2.strip!
+      query1 == query2
     end
   end
 end
