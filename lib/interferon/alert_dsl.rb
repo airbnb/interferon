@@ -87,6 +87,10 @@ module Interferon
   class MetricDSL
     include DSLMixin
 
+    def datadog_type(v = nil, &block)
+      get_or_set(:@datadog_type, v, block, 'metric alert')
+    end
+
     def datadog_query(v = nil, &block)
       get_or_set(:@datadog_query, v, block, '')
     end
