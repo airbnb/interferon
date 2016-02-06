@@ -173,7 +173,7 @@ module Interferon
       unless @request_shutdown
         # run time summary
         run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}", "dry_run:true"])
+        statsd.histogram('destinations.run_time_dry_run', run_time, :tags => ["destination:#{dest.class.name}"])
         log.info "#{dest.class.name} : dry run completed in %.2f seconds" % (run_time)
 
         # report destination stats
@@ -212,7 +212,7 @@ module Interferon
       unless @request_shutdown
         # run time summary
         run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}", "dry_run:false"])
+        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
         log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
 
         # report destination stats
