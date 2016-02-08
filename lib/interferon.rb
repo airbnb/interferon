@@ -138,20 +138,42 @@ module Interferon
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
-        if dry_run
-          dry_run_update_alerts_on_destination(dest, hosts, alerts, groups)
-        else
-          update_alerts_on_destination(dest, hosts, alerts, groups)
-        end
+        update_alerts_on_destination(dest, hosts, alerts, groups, dry_run)
       end
     end
 
-    def dry_run_update_alerts_on_destination(dest, hosts, alerts, groups)
+    def update_alerts_on_destination(dest, hosts, alerts, groups, dry_run)
       # track some counters/stats per destination
       start_time = Time.new.to_f
 
       # get already-defined alerts
       existing_alerts = dest.existing_alerts.dup
+
+      if dry_run
+        do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
+      else
+        do_regular_update(dest, hosts, alerts, existing_alerts, groups)
+      end
+
+      unless @request_shutdown
+        # run time summary
+        run_time = Time.new.to_f - start_time
+        statsd.histogram(
+          dry_run ? 'destinations.run_time.dry_run' : 'destinations.run_time',
+          run_time,
+          :tags => ["destination:#{dest.class.name}"])
+        log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
+
+        # report destination stats
+        dest.report_stats
+      end
+
+      if dry_run && !dest.api_errors.empty?
+        raise dest.api_errors.to_s
+      end
+    end
+
+    def do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
       to_remove = existing_alerts.reject{|key, a| !key.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)}
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
       alerts_queue.reject!{|name, pair| !Interferon::need_dry_run(pair[0], existing_alerts)}
@@ -169,28 +191,9 @@ module Interferon
         break if @request_shutdown
         dest.remove_alert_by_id(id) unless id.nil?
       end
-
-      unless @request_shutdown
-        # run time summary
-        run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time_dry_run', run_time, :tags => ["destination:#{dest.class.name}"])
-        log.info "#{dest.class.name} : dry run completed in %.2f seconds" % (run_time)
-
-        # report destination stats
-        dest.report_stats
-      end
-
-      if !dest.api_errors.empty?
-        raise dest.api_errors.to_s
-      end
     end
 
-    def update_alerts_on_destination(dest, hosts, alerts, groups)
-      # track some counters/stats per destination
-      start_time = Time.new.to_f
-
-      # get already-defined alerts
-      existing_alerts = dest.existing_alerts.dup
+    def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       existing_alerts.each{ |key, existing_alert| existing_alert['still_exists'] = false }
 
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
@@ -207,16 +210,6 @@ module Interferon
       to_delete.each do |key, alert|
         break if @request_shutdown
         dest.remove_alert(alert)
-      end
-
-      unless @request_shutdown
-        # run time summary
-        run_time = Time.new.to_f - start_time
-        statsd.histogram('destinations.run_time', run_time, :tags => ["destination:#{dest.class.name}"])
-        log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
-
-        # report destination stats
-        dest.report_stats
       end
     end
 

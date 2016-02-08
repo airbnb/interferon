@@ -35,7 +35,7 @@ describe Interferon::Interferon do
       expect(dest).not_to receive(:create_alert)
       expect(dest).not_to receive(:remove_alert_by_id)
       
-      interferon.dry_run_update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2']], {})
+      interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2']], {}, true)
     end
 
     it 'dry run runs added alerts' do
@@ -45,7 +45,7 @@ describe Interferon::Interferon do
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name3').once
       
-      interferon.dry_run_update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {})
+      interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {}, true)
     end
 
     it 'dry run runs updated alerts' do
@@ -55,7 +55,7 @@ describe Interferon::Interferon do
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name1').once
       
-      interferon.dry_run_update_alerts_on_destination(dest, ['host'], [added], {})
+      interferon.update_alerts_on_destination(dest, ['host'], [added], {}, true)
     end
 
     def mock_existing_alerts

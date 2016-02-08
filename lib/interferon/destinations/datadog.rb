@@ -174,6 +174,7 @@ module Interferon::Destinations
     def remove_alert_by_id(alert_id)
       log.debug("deleting alert, id: #{alert_id}")
       @dog.delete_alert(alert_id)
+      @stats[:alerts_deleted] += 1
     end
   end
 end
