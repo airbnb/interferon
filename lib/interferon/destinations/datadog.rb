@@ -16,7 +16,6 @@ module Interferon::Destinations
       end
 
       @dog = Dogapi::Client.new(options['api_key'], options['app_key'])
-      @dry_run = !!options['dry_run']
       @existing_alerts = nil
 
       # create datadog alerts 10 at a time
@@ -32,6 +31,10 @@ module Interferon::Destinations
         :api_unknown_errors => 0,
         :manually_created_alerts => 0,
       }
+    end
+
+    def api_errors
+      @api_errors ||= []
     end
 
     def existing_alerts
@@ -87,7 +90,7 @@ module Interferon::Destinations
         resp = @dog.alert(
           alert['metric']['datadog_query'].strip,
           alert_opts,
-        ) unless @dry_run
+        )
 
       # existing alert, modify it
       else
@@ -99,11 +102,14 @@ module Interferon::Destinations
           id,
           alert['metric']['datadog_query'].strip,
           alert_opts
-        ) unless @dry_run
+        )
       end
 
       # log whenever we've encountered errors
-      code = @dry_run ? 200 : resp[0].to_i
+      code = resp[0].to_i
+      if code != 200
+        api_errors << "#{code.to_s} on alert #{alert['name']}"
+      end
 
       # client error
       if code == 400
@@ -138,14 +144,15 @@ module Interferon::Destinations
         @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
       end
 
+      id = resp[1].nil? ? nil : resp[1]['id']
       # lets key alerts by their name
-      return alert['name']
+      return [alert['name'], id]
     end
 
     def remove_alert(alert)
       if alert['message'].include?(ALERT_KEY)
         log.debug("deleting alert #{alert['id']} (#{alert['name']})")
-        @dog.delete_alert(alert['id']) unless @dry_run
+        @dog.delete_alert(alert['id'])
         @stats[:alerts_deleted] += 1
       else
         log.warn("not deleting manually-created alert #{alert['id']} (#{alert['name']})")
@@ -162,6 +169,12 @@ module Interferon::Destinations
         @stats[:alerts_updated],
         @stats[:alerts_deleted],
       ]
+    end
+
+    def remove_alert_by_id(alert_id)
+      log.debug("deleting alert, id: #{alert_id}")
+      @dog.delete_alert(alert_id)
+      @stats[:alerts_deleted] += 1
     end
   end
 end

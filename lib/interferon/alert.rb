@@ -22,6 +22,14 @@ module Interferon
       self
     end
 
+    def change_name(name)
+      unless @dsl
+        raise "This alert has not yet been evaluated"
+      end
+
+      @dsl.name(name)
+    end
+
     def [](attr)
       unless @dsl
         raise "This alert has not yet been evaluated"
