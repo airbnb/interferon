@@ -119,7 +119,8 @@ module Interferon::Destinations
 
         @stats[:api_client_errors] += 1
         log.error("client error while #{action} alert '#{alert['name']}';" \
-            " query was '#{alert['metric']['datadog_query'].strip}'")
+            " query was '#{alert['metric']['datadog_query'].strip}'" \
+            " response was #{resp[0]}:'#{resp[1].inspect}'")
 
       # unknown (prob. datadog) error:
       elsif code >= 400 || code == -1
