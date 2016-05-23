@@ -35,3 +35,4 @@ destinations:
     options:
       app_key: "fillmein"
       api_key: "alsomissing"
+      api_timeout: 15

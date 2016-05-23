@@ -15,7 +15,9 @@ module Interferon::Destinations
         end
       end
 
-      @dog = Dogapi::Client.new(options['api_key'], options['app_key'])
+      api_timeout = options['api_timeout'] || 15
+      @dog = Dogapi::Client.new(options['api_key'], options['app_key'], nil, nil, true, api_timeout)
+
       @existing_alerts = nil
 
       # create datadog alerts 10 at a time
@@ -41,6 +43,8 @@ module Interferon::Destinations
       unless @existing_alerts
         resp = @dog.get_all_alerts()
         alerts = resp[1]['alerts']
+
+        raise 'Failed to retrieve current alerts from datadog' if alerts.nil?
 
         # key alerts by name
         @existing_alerts = Hash[alerts.map{ |a| [a['name'], a] }]
