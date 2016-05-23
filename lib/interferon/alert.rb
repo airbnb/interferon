@@ -1,8 +1,8 @@
 module Interferon
   class Alert
-    def initialize(path)
-      @path = path
-      @filename = File.basename(path)
+    def initialize(alerts_repo_path, alert_path)
+      @path = alert_path
+      @filename = self.class.get_name_from_path(alerts_repo_path, alert_path)
 
       @text = File.read(@path)
 
@@ -36,6 +36,13 @@ module Interferon
       end
 
       return @dsl.send(attr)
+    end
+
+    private
+
+    def self.get_name_from_path(alerts_repo_path, alert_path)
+      base_index = File.join(alerts_repo_path, 'alerts').split(File::SEPARATOR).length
+      alert_path.split(File::SEPARATOR)[base_index..-1].join(File::SEPARATOR)
     end
   end
 end
