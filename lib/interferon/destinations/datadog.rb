@@ -15,7 +15,22 @@ module Interferon::Destinations
         end
       end
 
-      @dog = Dogapi::Client.new(options['api_key'], options['app_key'])
+      # Set dogapi timeout explicitly
+      api_timeout = options['api_timeout'] || 15
+
+      # Default parameters of Dogapi Client initialize() can be referenced from link below:
+      # (as of this writing)
+      # https://github.com/DataDog/dogapi-rb/blob/master/lib/dogapi/facade.rb#L14
+      args = [
+        options['api_key'],
+        options['app_key'],
+        nil, # host to talk to
+        nil, # device
+        true, # silent?
+        api_timeout, # API timeout
+      ]
+      @dog = Dogapi::Client.new(args)
+
       @existing_alerts = nil
 
       # create datadog alerts 10 at a time
@@ -40,6 +55,12 @@ module Interferon::Destinations
     def existing_alerts
       unless @existing_alerts
         resp = @dog.get_all_alerts()
+
+        code = resp[0].to_i
+        if code != 200
+          raise "Failed to retrieve existing alerts from datadog. #{code.to_s}: #{resp[1].inspect}"
+        end
+
         alerts = resp[1]['alerts']
 
         # key alerts by name
