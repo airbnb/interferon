@@ -29,7 +29,7 @@ module Interferon::Destinations
         true, # silent?
         api_timeout, # API timeout
       ]
-      @dog = Dogapi::Client.new(args)
+      @dog = Dogapi::Client.new(*args)
 
       @existing_alerts = nil
 
