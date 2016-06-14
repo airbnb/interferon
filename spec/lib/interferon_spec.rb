@@ -6,19 +6,6 @@ require 'interferon/destinations/datadog'
 include Interferon
 
 describe Interferon::Interferon do
-  it "would not be dry run if only alert message changed" do
-    alert1 = create_test_alert('name1', 'testquery', 'message1')
-    alert2 = mock_alert_json('name2', 'testquery', 'message2')
-
-    expect(Interferon::Interferon.same_alerts_for_dry_run_purpose(alert1, alert2)).to be true
-  end
-
-  it "would be dry run if alert datadog query changed" do
-    alert1 = create_test_alert('name1', 'testquery1', 'message1')
-    alert2 = mock_alert_json('name2', 'testquery2', 'message2')
-
-    expect(Interferon::Interferon.same_alerts_for_dry_run_purpose(alert1, alert2)).to be false
-  end
 
   context "dry_run_update_alerts_on_destination" do
     let(:the_existing_alerts) {mock_existing_alerts}
@@ -29,12 +16,33 @@ describe Interferon::Interferon do
       allow(dest).to receive(:report_stats)
     end
 
+    it "would be dry run if only alert message changed" do
+      alert1 = create_test_alert('name1', 'testquery', 'message1')
+      alert2 = mock_alert_json('name2', 'testquery', 'message2')
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "would be dry run if alert datadog query changed" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1')
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2')
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "would be not dry run if alert datadog query and message are the same" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1')
+      alert2 = mock_alert_json('name1', 'testquery1', "message1\nThis alert was created via the alerts framework")
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be true
+    end
+
     it 'dry run does not re-run existing alerts' do
       alerts = mock_existing_alerts
       interferon = Interferon::Interferon.new(nil,nil,nil,nil)
       expect(dest).not_to receive(:create_alert)
       expect(dest).not_to receive(:remove_alert_by_id)
-      
+
       interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2']], {}, true)
     end
 
@@ -44,7 +52,7 @@ describe Interferon::Interferon do
       added = create_test_alert('name3', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name3').once
-      
+
       interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {}, true)
     end
 
@@ -54,7 +62,7 @@ describe Interferon::Interferon do
       added = create_test_alert('name1', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name1').once
-      
+
       interferon.update_alerts_on_destination(dest, ['host'], [added], {}, true)
     end
 
