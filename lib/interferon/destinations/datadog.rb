@@ -38,8 +38,11 @@ module Interferon::Destinations
 
       @stats = {
         :alerts_created => 0,
+        :alerts_to_be_created => 0,
         :alerts_updated => 0,
+        :alerts_to_be_updated => 0,
         :alerts_deleted => 0,
+        :alerts_to_be_deleted => 0,
         :alerts_silenced => 0,
         :api_successes => 0,
         :api_client_errors => 0,
@@ -50,6 +53,10 @@ module Interferon::Destinations
 
     def api_errors
       @api_errors ||= []
+    end
+
+    def generate_message(message, people)
+      [message, ALERT_KEY, people.map{ |p| "@#{p}" }].flatten.join("\n")
     end
 
     def existing_alerts
@@ -81,11 +88,7 @@ module Interferon::Destinations
 
     def create_alert(alert, people)
       # create a message which includes the notifications
-      message = [
-        alert['message'],
-        ALERT_KEY,
-        people.map{ |p| "@#{p}" }
-      ].flatten.join("\n")
+      message = generate_message(alert['message'], people)
 
       # create the hash of options to send to datadog
       alert_opts = {
@@ -103,10 +106,13 @@ module Interferon::Destinations
       # timeout is in seconds, but set it to 1 hour at least
       alert_opts[:timeout_h] = [1, (alert['timeout'].to_i / 3600)].max if alert['timeout']
 
+      datadog_query = alert['metric']['datadog_query'].strip
+      existing_alert = existing_alerts[alert['name']]
       # new alert, create it
-      if existing_alerts[alert['name']].nil?
+      if existing_alert.nil? or existing_alert['id'].nil?
         action = :creating
-        log.debug("new alert #{alert['name']}")
+        @stats[:alerts_to_be_created] += 1
+        log.info("creating new alert #{alert['name']}: #{datadog_query} #{message}")
 
         resp = @dog.alert(
           alert['metric']['datadog_query'].strip,
@@ -116,8 +122,16 @@ module Interferon::Destinations
       # existing alert, modify it
       else
         action = :updating
-        id = existing_alerts[alert['name']]['id']
-        log.debug("updating existing alert #{id} (#{alert['name']})")
+        @stats[:alerts_to_be_updated] += 1
+        id = existing_alert['id']
+
+        if datadog_query != existing_alert['query'] and message != existing_alert['message']
+          log.info("updating existing alert #{id} (#{alert['name']}) with new message and query: #{datadog_query} #{message}")
+        elsif message != existing_alert['message']
+          log.info("updating existing alert #{id} (#{alert['name']}) with new message: #{message}")
+        else
+          log.info("updating existing alert #{id} (#{alert['name']}) with query: #{datadog_query}")
+        end
 
         resp = @dog.update_alert(
           id,
@@ -128,39 +142,11 @@ module Interferon::Destinations
 
       # log whenever we've encountered errors
       code = resp[0].to_i
-      if code != 200
-        api_errors << "#{code.to_s} on alert #{alert['name']}"
-      end
-
-      # client error
-      if code == 400
-        statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.client_error', 1, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
-
-        @stats[:api_client_errors] += 1
-        log.error("client error while #{action} alert '#{alert['name']}';" \
-            " query was '#{alert['metric']['datadog_query'].strip}'" \
-            " response was #{resp[0]}:'#{resp[1].inspect}'")
-
-      # unknown (prob. datadog) error:
-      elsif code >= 400 || code == -1
-        statsd.gauge('datadog.api.unknown_error', 1, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
-
-        @stats[:api_unknown_errors] += 1
-        log.error("unknown error while #{action} alert '#{alert['name']}':" \
-            " query was '#{alert['metric']['datadog_query'].strip}'" \
-            " response was #{resp[0]}:'#{resp[1].inspect}'")
+      log_datadog_response_code(resp, code, action, alert)
 
       # assume this was a success
-      else
-        statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
-        statsd.gauge('datadog.api.success', 1, :tags => ["alert:#{alert}"])
-
-        @stats[:api_successes] += 1
+      if !(code >= 400 || code == -1)
+        # assume this was a success
         @stats[:alerts_created] += 1 if action == :creating
         @stats[:alerts_updated] += 1 if action == :updating
         @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
@@ -173,9 +159,7 @@ module Interferon::Destinations
 
     def remove_alert(alert)
       if alert['message'].include?(ALERT_KEY)
-        log.debug("deleting alert #{alert['id']} (#{alert['name']})")
-        @dog.delete_alert(alert['id'])
-        @stats[:alerts_deleted] += 1
+        remove_alert_by_id(alert['id'])
       else
         log.warn("not deleting manually-created alert #{alert['id']} (#{alert['name']})")
       end
@@ -186,17 +170,68 @@ module Interferon::Destinations
         statsd.gauge("datadog.#{k}", v)
       end
 
-      log.info "datadog: created %d updated %d and deleted %d alerts" % [
+      log.info "datadog: successfully created (%d/%d), updated (%d/%d), and deleted (%d/%d) alerts" % [
         @stats[:alerts_created],
+        @stats[:alerts_to_be_created],
         @stats[:alerts_updated],
+        @stats[:alerts_to_be_updated],
         @stats[:alerts_deleted],
+        @stats[:alerts_to_be_deleted],
       ]
     end
 
     def remove_alert_by_id(alert_id)
       log.debug("deleting alert, id: #{alert_id}")
-      @dog.delete_alert(alert_id)
-      @stats[:alerts_deleted] += 1
+      @stats[:alerts_to_be_deleted] += 1
+
+      resp = @dog.delete_alert(alert_id)
+      code = resp[0].to_i
+      log_datadog_response_code(resp, code, :deleting)
+
+      if !(code >= 300 || code == -1)
+        # assume this was a success
+        @stats[:alerts_deleted] += 1
+      end
     end
+
+    def log_datadog_response_code(resp, code, action, alert=nil)
+      # log whenever we've encountered errors
+      if code != 200 and !alert.nil?
+        api_errors << "#{code.to_s} on alert #{alert['name']}"
+      end
+
+      # client error
+      if code == 400
+        @stats[:api_client_errors] += 1
+        if !alert.nil?
+          statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.client_error', 1, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
+          log.error("client error while #{action} alert '#{alert['name']}';" \
+                    " query was '#{alert['metric']['datadog_query'].strip}'" \
+                    " response was #{resp[0]}:'#{resp[1].inspect}'")
+        end
+
+        # unknown (prob. datadog) error:
+      elsif code > 400 || code == -1
+        @stats[:api_unknown_errors] += 1
+        if !alert.nil?
+          statsd.gauge('datadog.api.unknown_error', 1, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
+          log.error("unknown error while #{action} alert '#{alert['name']}':" \
+                    " query was '#{alert['metric']['datadog_query'].strip}'" \
+                    " response was #{resp[0]}:'#{resp[1].inspect}'")
+        end
+      else
+        @stats[:api_successes] += 1
+        if !alert.nil?
+          statsd.gauge('datadog.api.unknown_error', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('datadog.api.success', 1, :tags => ["alert:#{alert}"])
+        end
+      end
+    end
+
   end
 end
