@@ -1,5 +1,8 @@
+require 'diffy'
 require 'dogapi'
 require 'set'
+
+Diffy::Diff.default_format = :color
 
 module Interferon::Destinations
   class Datadog
@@ -32,6 +35,7 @@ module Interferon::Destinations
       @dog = Dogapi::Client.new(*args)
 
       @existing_alerts = nil
+      @dry_run = options['dry_run']
 
       # create datadog alerts 10 at a time
       @concurrency = 10
@@ -108,11 +112,14 @@ module Interferon::Destinations
 
       datadog_query = alert['metric']['datadog_query'].strip
       existing_alert = existing_alerts[alert['name']]
+      new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}\n"
+
       # new alert, create it
-      if existing_alert.nil? or existing_alert['id'].nil?
+      if existing_alert.nil?
         action = :creating
         @stats[:alerts_to_be_created] += 1
-        log.info("creating new alert #{alert['name']}: #{datadog_query} #{message}")
+        diff = Diffy::Diff.new("Query:\nMessage:\n", new_alert_text)
+        log.info("creating new alert #{alert['name']}:\n#{diff}")
 
         resp = @dog.alert(
           alert['metric']['datadog_query'].strip,
@@ -125,19 +132,22 @@ module Interferon::Destinations
         @stats[:alerts_to_be_updated] += 1
         id = existing_alert['id']
 
-        if datadog_query != existing_alert['query'] and message != existing_alert['message']
-          log.info("updating existing alert #{id} (#{alert['name']}) with new message and query: #{datadog_query} #{message}")
-        elsif message != existing_alert['message']
-          log.info("updating existing alert #{id} (#{alert['name']}) with new message: #{message}")
-        else
-          log.info("updating existing alert #{id} (#{alert['name']}) with query: #{datadog_query}")
-        end
+        existing_alert_text = "Query:\n#{existing_alert['query']}\nMessage:\n#{existing_alert['message']}\n"
+        diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>5)
+        log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 
-        resp = @dog.update_alert(
-          id,
-          alert['metric']['datadog_query'].strip,
-          alert_opts
-        )
+        if @dry_run
+          resp = @dog.alert(
+            alert['metric']['datadog_query'].strip,
+            alert_opts,
+          )
+        else
+          resp = @dog.update_alert(
+            id,
+            alert['metric']['datadog_query'].strip,
+            alert_opts
+          )
+        end
       end
 
       # log whenever we've encountered errors
@@ -159,7 +169,19 @@ module Interferon::Destinations
 
     def remove_alert(alert)
       if alert['message'].include?(ALERT_KEY)
-        remove_alert_by_id(alert['id'])
+        @stats[:alerts_to_be_deleted] += 1
+        log.info("deleting alert: #{alert['name']}")
+
+        if not @dry_run
+          resp = @dog.delete_alert(alert['id'])
+          code = resp[0].to_i
+          log_datadog_response_code(resp, code, :deleting)
+
+          if !(code >= 300 || code == -1)
+            # assume this was a success
+            @stats[:alerts_deleted] += 1
+          end
+        end
       else
         log.warn("not deleting manually-created alert #{alert['id']} (#{alert['name']})")
       end
@@ -181,17 +203,11 @@ module Interferon::Destinations
     end
 
     def remove_alert_by_id(alert_id)
+      # This should only be used by dry-run to clean up created dry-run alerts
       log.debug("deleting alert, id: #{alert_id}")
-      @stats[:alerts_to_be_deleted] += 1
-
       resp = @dog.delete_alert(alert_id)
       code = resp[0].to_i
       log_datadog_response_code(resp, code, :deleting)
-
-      if !(code >= 300 || code == -1)
-        # assume this was a success
-        @stats[:alerts_deleted] += 1
-      end
     end
 
     def log_datadog_response_code(resp, code, action, alert=nil)
