@@ -1,3 +1,4 @@
+include ::Interferon::Logging
 
 module Interferon::GroupSources
   class Filesystem

@@ -23,11 +23,12 @@ module Interferon
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similiar hash from type => options for each alerter
-    def initialize(alerts_repo_path, groups_sources, host_sources, destinations)
+    def initialize(alerts_repo_path, groups_sources, host_sources, destinations, dry_run=false)
       @alerts_repo_path = alerts_repo_path
       @groups_sources = groups_sources
       @host_sources = host_sources
       @destinations = destinations
+      @dry_run = dry_run
       @request_shutdown = false
     end
 
@@ -36,7 +37,8 @@ module Interferon
         log.info "SIGTERM received. shutting down gracefully..."
         @request_shutdown = true
       end
-      run_desc = dry_run ? 'dry run' : 'run'
+      @dry_run = dry_run
+      run_desc = @dry_run ? 'dry run' : 'run'
       log.info "beginning alerts #{run_desc}"
 
       alerts = read_alerts
@@ -45,9 +47,12 @@ module Interferon
 
       @destinations.each do |dest|
         dest['options'] ||= {}
+        if @dry_run
+          dest['options']['dry_run'] = true
+        end
       end
 
-      update_alerts(@destinations, hosts, alerts, groups, dry_run)
+      update_alerts(@destinations, hosts, alerts, groups)
 
       if @request_shutdown
         log.info "interferon #{run_desc} shut down by SIGTERM"
@@ -133,23 +138,23 @@ module Interferon
       return hosts
     end
 
-    def update_alerts(destinations, hosts, alerts, groups, dry_run)
+    def update_alerts(destinations, hosts, alerts, groups)
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
-        update_alerts_on_destination(dest, hosts, alerts, groups, dry_run)
+        update_alerts_on_destination(dest, hosts, alerts, groups)
       end
     end
 
-    def update_alerts_on_destination(dest, hosts, alerts, groups, dry_run)
+    def update_alerts_on_destination(dest, hosts, alerts, groups)
       # track some counters/stats per destination
       start_time = Time.new.to_f
 
       # get already-defined alerts
       existing_alerts = dest.existing_alerts
 
-      if dry_run
+      if @dry_run
         do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
       else
         do_regular_update(dest, hosts, alerts, existing_alerts, groups)
@@ -159,7 +164,7 @@ module Interferon
         # run time summary
         run_time = Time.new.to_f - start_time
         statsd.histogram(
-          dry_run ? 'destinations.run_time.dry_run' : 'destinations.run_time',
+          @dry_run ? 'destinations.run_time.dry_run' : 'destinations.run_time',
           run_time,
           :tags => ["destination:#{dest.class.name}"])
         log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
@@ -168,7 +173,7 @@ module Interferon
         dest.report_stats
       end
 
-      if dry_run && !dest.api_errors.empty?
+      if @dry_run && !dest.api_errors.empty?
         raise dest.api_errors.to_s
       end
     end
@@ -179,6 +184,7 @@ module Interferon
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
           existing_dry_run_alerts << [alert['name'], alert['id']]
+          existing_alerts.remove(name)
         end
       end
 
@@ -199,8 +205,12 @@ module Interferon
         alert.change_name(dry_run_alert_name)
       end
 
-      updates_queue = alerts_queue.reject{
-        |name, alert_people_pair| !Interferon::need_update(dest, alert_people_pair, existing_alerts)}
+      updates_queue = alerts_queue.reject do |name, alert_people_pair|
+        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      end
+
+      # Create alerts in destination
+      created_alerts = create_alerts(dest, updates_queue)
 
       # Existing alerts are pruned until all that remains are alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
@@ -209,8 +219,11 @@ module Interferon
         to_remove.delete(alert['name'])
       end
 
-      # Create alerts in destination
-      created_alerts = create_alerts(dest, updates_queue)
+      # Clean up alerts not longer being generated
+      to_remove.each do |name, alert|
+        break if @request_shutdown
+        dest.remove_alert(alert)
+      end
 
       # Clean up dry-run created alerts
       (created_alerts + existing_dry_run_alerts).each do |alert_id_pair|
@@ -218,18 +231,13 @@ module Interferon
         dest.remove_alert_by_id(alert_id)
       end
 
-      # Log dry-run creations that are actually updates
-      dry_run_updates = updates_queue.reject{
-        |name, alert_people_pair| existing_alerts[alert_people_pair[0]['name']].nil?}
-      log.info "datadog: [dry-run] #{dry_run_updates.length} alerts pending update: #{dry_run_updates.keys}"
-      # Log clean up of alerts not longer being generated
-      log.info "datadog: [dry-run] #{to_remove.length} alerts pending deletion: #{to_remove.keys}"
     end
 
     def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject{
-        |name, alert_people_pair| !Interferon::need_update(dest, alert_people_pair, existing_alerts)}
+      updates_queue = alerts_queue.reject do |name, alert_people_pair|
+        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      end
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
@@ -357,11 +365,27 @@ module Interferon
 
     def self.same_alerts(dest, alert_people_pair, alert_api_json)
       alert, people = alert_people_pair
-      query1 = alert['metric']['datadog_query'].strip
-      message1 = dest.generate_message(alert['message'], people).strip
-      query2 = alert_api_json['query'].strip
-      message2 = alert_api_json['message'].strip
-      query1 == query2 and message1 == message2
+
+      prev_alert = {
+        :query => alert_api_json['query'].strip,
+        :message => alert_api_json['message'].strip,
+        :notify_no_data => alert_api_json['notify_no_data'],
+        :silenced => alert_api_json['silenced'],
+        :timeout => alert_api_json['timeout_h'],
+        :no_data_timeframe => alert_api_json['no_data_timeframe']
+      }
+
+      new_alert = {
+        :query => alert['metric']['datadog_query'].strip,
+        :message => dest.generate_message(alert['message'], people).strip,
+        :notify_no_data => alert['notify_no_data'],
+        :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
+        :timeout => alert['timeout'] || nil,
+        :no_data_timeframe => alert['no_data_timeframe'] || nil
+      }
+
+      prev_alert == new_alert
     end
+
   end
 end
