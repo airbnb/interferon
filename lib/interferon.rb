@@ -38,7 +38,7 @@ module Interferon
         @request_shutdown = true
       end
       @dry_run = dry_run
-      run_desc = dry_run ? 'dry run' : 'run'
+      run_desc = @dry_run ? 'dry run' : 'run'
       log.info "beginning alerts #{run_desc}"
 
       alerts = read_alerts
@@ -47,7 +47,7 @@ module Interferon
 
       @destinations.each do |dest|
         dest['options'] ||= {}
-        if dry_run
+        if @dry_run
           dest['options']['dry_run'] = true
         end
       end
@@ -184,6 +184,7 @@ module Interferon
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
           existing_dry_run_alerts << [alert['name'], alert['id']]
+          existing_alerts.remove(name)
         end
       end
 
