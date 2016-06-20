@@ -1,6 +1,9 @@
 require 'diffy'
 require 'dogapi'
 require 'set'
+require 'treetop'
+
+Treetop.load 'datadog.treetop'
 
 Diffy::Diff.default_format = :text
 
@@ -53,6 +56,8 @@ module Interferon::Destinations
         :api_unknown_errors => 0,
         :manually_created_alerts => 0,
       }
+
+      @datadog_query_parser = DatadogQueryParser.new
     end
 
     def api_errors
@@ -112,6 +117,10 @@ module Interferon::Destinations
 
       datadog_query = alert['metric']['datadog_query'].strip
       existing_alert = existing_alerts[alert['name']]
+
+      if datadog_query_parser.parse(datadog_query.split.join('')).nil?
+        log.warn "Invalid datadog query in #{alert['name']}: #{datadog_query} #{datadog_query_parser.failure_reason}"
+      end
 
       # new alert, create it
       if existing_alert.nil?

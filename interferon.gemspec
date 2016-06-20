@@ -21,6 +21,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency "aws-sdk", "~> 1.35", ">= 1.35.1"
   gem.add_runtime_dependency "dogstatsd-ruby", "~> 1.4", ">= 1.4.1"
   gem.add_runtime_dependency "diffy", "~> 3.1.0", ">= 3.1.0"
+  gem.add_runtime_dependency "treetop", "~> 1.6", ">= 1.6.5"
 
   gem.add_development_dependency "rspec", "~> 3.2"
   gem.add_development_dependency "pry", "~> 0.10"
