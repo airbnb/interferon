@@ -205,8 +205,9 @@ module Interferon
         alert.change_name(dry_run_alert_name)
       end
 
-      updates_queue = alerts_queue.reject{
-        |name, alert_people_pair| !Interferon::need_update(dest, alert_people_pair, existing_alerts)}
+      updates_queue = alerts_queue.reject do |name, alert_people_pair|
+        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      end
 
       # Create alerts in destination
       created_alerts = create_alerts(dest, updates_queue)
@@ -234,8 +235,9 @@ module Interferon
 
     def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject{
-        |name, alert_people_pair| !Interferon::need_update(dest, alert_people_pair, existing_alerts)}
+      updates_queue = alerts_queue.reject do |name, alert_people_pair|
+        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      end
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
