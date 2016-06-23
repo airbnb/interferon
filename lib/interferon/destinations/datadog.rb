@@ -134,10 +134,7 @@ module Interferon::Destinations
         new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}"
         existing_alert_text = "Query:\n#{existing_alert['query']}\nMessage:\n#{existing_alert['message']}\n"
         diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>1)
-        log.info("updating existing alert #{id} (#{alert['name']}):")
-        diff.to_s.split(/[\r\n]/).each do |diff_line|
-          log.info("#{diff_line}")
-        end
+        log.info("updating existing alert #{id} (#{alert['name']}): #{diff}")
 
         if @dry_run
           resp = @dog.alert(
