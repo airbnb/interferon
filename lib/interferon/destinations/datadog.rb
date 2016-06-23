@@ -2,7 +2,7 @@ require 'diffy'
 require 'dogapi'
 require 'set'
 
-Diffy::Diff.default_format = :color
+Diffy::Diff.default_format = :text
 
 module Interferon::Destinations
   class Datadog
@@ -112,14 +112,13 @@ module Interferon::Destinations
 
       datadog_query = alert['metric']['datadog_query'].strip
       existing_alert = existing_alerts[alert['name']]
-      new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}\n"
 
       # new alert, create it
       if existing_alert.nil?
         action = :creating
         @stats[:alerts_to_be_created] += 1
-        diff = Diffy::Diff.new("Query:\nMessage:\n", new_alert_text)
-        log.info("creating new alert #{alert['name']}:\n#{diff}")
+        new_alert_text = "Query: #{datadog_query} Message: #{message.split().join(' ')}"
+        log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
         resp = @dog.alert(
           alert['metric']['datadog_query'].strip,
@@ -132,9 +131,13 @@ module Interferon::Destinations
         @stats[:alerts_to_be_updated] += 1
         id = existing_alert['id']
 
+        new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}"
         existing_alert_text = "Query:\n#{existing_alert['query']}\nMessage:\n#{existing_alert['message']}\n"
-        diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>5)
-        log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
+        diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>1)
+        log.info("updating existing alert #{id} (#{alert['name']}):")
+        diff.to_s.split(/[\r\n]/).each do |diff_line|
+          log.info("#{diff_line}")
+        end
 
         if @dry_run
           resp = @dog.alert(
