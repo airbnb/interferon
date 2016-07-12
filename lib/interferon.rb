@@ -367,10 +367,13 @@ module Interferon
       alert, people = alert_people_pair
       query1 = alert['metric']['datadog_query'].strip
       message1 = dest.generate_message(alert['message'], people).strip
+      notify_no_data1 = alert['notify_no_data']
+
       query2 = alert_api_json['query'].strip
       message2 = alert_api_json['message'].strip
+      notify_no_data2 = alert_api_json['notify_no_data']
 
-      query1 == query2 and message1 == message2
+      query1 == query2 and message1 == message2 and !!notify_no_data1 == !!notify_no_data2
     end
 
   end
