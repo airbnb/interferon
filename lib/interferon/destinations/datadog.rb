@@ -118,7 +118,7 @@ module Interferon::Destinations
       datadog_query = alert['metric']['datadog_query'].strip
       existing_alert = existing_alerts[alert['name']]
 
-      if datadog_query_parser.parse(datadog_query.split.join('')).nil?
+      if @datadog_query_parser.parse(datadog_query.split.join('')).nil?
         log.warn "Invalid datadog query in #{alert['name']}: #{datadog_query} #{datadog_query_parser.failure_reason}"
       end
 
