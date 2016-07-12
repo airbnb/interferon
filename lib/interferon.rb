@@ -216,7 +216,7 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        to_remove.delete_at(to_remove.find_index(alert['name']))
       end
 
       # Clean up alerts not longer being generated
@@ -246,7 +246,7 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        to_remove.delete_at(to_remove.find_index(alert['name']))
       end
 
       # Clean up alerts not longer being generated
