@@ -80,7 +80,16 @@ module Interferon::Destinations
         alerts = resp[1]['alerts']
 
         # key alerts by name
-        @existing_alerts = Hash[alerts.map{ |a| [a['name'], a] }]
+        @existing_alerts = {}
+        alerts.each do |alert|
+          existing_alert = @existing_alerts[alert['name']]
+          if existing_alert.nil?
+            alert['id'] = [alert['id']]
+            @existing_alerts[alert['name']] = alert
+          else
+            existing_alert['id'] << alert['id']
+          end
+        end
 
         # count how many are manually created
         @stats[:manually_created_alerts] = \
@@ -138,7 +147,7 @@ module Interferon::Destinations
       else
         action = :updating
         @stats[:alerts_to_be_updated] += 1
-        id = existing_alert['id']
+        id = existing_alert['id'][0]
 
         new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}"
         existing_alert_text = "Query:\n#{existing_alert['query']}\nMessage:\n#{existing_alert['message']}\n"
@@ -171,7 +180,7 @@ module Interferon::Destinations
         @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
       end
 
-      id = resp[1].nil? ? nil : resp[1]['id']
+      id = resp[1].nil? ? nil : [resp[1]['id']]
       # lets key alerts by their name
       return [alert['name'], id]
     end
@@ -182,13 +191,15 @@ module Interferon::Destinations
         log.info("deleting alert: #{alert['name']}")
 
         if not @dry_run
-          resp = @dog.delete_alert(alert['id'])
-          code = resp[0].to_i
-          log_datadog_response_code(resp, code, :deleting)
+          alert['id'].each do |alert_id|
+            resp = @dog.delete_alert(alert_id)
+            code = resp[0].to_i
+            log_datadog_response_code(resp, code, :deleting)
 
-          if !(code >= 300 || code == -1)
-            # assume this was a success
-            @stats[:alerts_deleted] += 1
+            if !(code >= 300 || code == -1)
+              # assume this was a success
+              @stats[:alerts_deleted] += 1
+            end
           end
         end
       else

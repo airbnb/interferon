@@ -193,7 +193,7 @@ module Interferon
         existing_alert = existing_alerts[name]
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + name
         existing_alert['name'] = dry_run_alert_name
-        existing_alert['id'] = nil
+        existing_alert['id'] = [nil]
         existing_alerts[dry_run_alert_name] = existing_alerts.delete(name)
       end
 
@@ -216,7 +216,15 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        old_alerts = to_remove[alert['name']]
+
+        if not old_alerts.nil?
+          if old_alerts['id'].length == 1
+            to_remove.delete(alert['name'])
+          else
+            old_alerts['id'] = old_alerts['id'].drop(0)
+          end
+        end
       end
 
       # Clean up alerts not longer being generated
@@ -227,8 +235,10 @@ module Interferon
 
       # Clean up dry-run created alerts
       (created_alerts + existing_dry_run_alerts).each do |alert_id_pair|
-        alert_id = alert_id_pair[1]
-        dest.remove_alert_by_id(alert_id)
+        alert_ids = alert_id_pair[1]
+        alert_ids.each do |alert_id|
+          dest.remove_alert_by_id(alert_id)
+        end
       end
 
     end
@@ -246,7 +256,15 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        old_alerts = to_remove[alert['name']]
+
+        if not old_alerts.nil?
+          if alert['id'].length == 1
+            to_remove.delete(alert['name'])
+          else
+            old_alerts['id'] = old_alerts['id'].drop(0)
+          end
+        end
       end
 
       # Clean up alerts not longer being generated
@@ -380,7 +398,7 @@ module Interferon
         :message => dest.generate_message(alert['message'], people).strip,
         :notify_no_data => alert['notify_no_data'],
         :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
-        :timeout => alert['timeout'] || nil,
+        :timeout => alert['timeout'] || nil && [1, alert['timeout'].to_i / 3600].max,
         :no_data_timeframe => alert['no_data_timeframe'] || nil
       }
 
