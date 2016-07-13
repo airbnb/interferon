@@ -216,7 +216,7 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete_at(to_remove.find_index(alert['name']))
+        to_remove.delete(alert['name'])
       end
 
       # Clean up alerts not longer being generated
@@ -246,7 +246,7 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete_at(to_remove.find_index(alert['name']))
+        to_remove.delete(alert['name'])
       end
 
       # Clean up alerts not longer being generated
@@ -365,15 +365,26 @@ module Interferon
 
     def self.same_alerts(dest, alert_people_pair, alert_api_json)
       alert, people = alert_people_pair
-      query1 = alert['metric']['datadog_query'].strip
-      message1 = dest.generate_message(alert['message'], people).strip
-      notify_no_data1 = alert['notify_no_data']
 
-      query2 = alert_api_json['query'].strip
-      message2 = alert_api_json['message'].strip
-      notify_no_data2 = alert_api_json['notify_no_data']
+      prev_alert = {
+        :query => alert_api_json['query'].strip,
+        :message => alert_api_json['message'].strip,
+        :notify_no_data => alert_api_json['notify_no_data'],
+        :silenced => alert_api_json['silenced'],
+        :timeout => alert_api_json['timeout_h'],
+        :no_data_timeframe => alert_api_json['no_data_timeframe']
+      }
 
-      query1 == query2 and message1 == message2 and !!notify_no_data1 == !!notify_no_data2
+      new_alert = {
+        :query => alert['metric']['datadog_query'].strip,
+        :message => dest.generate_message(alert['message'], people).strip,
+        :notify_no_data => alert['notify_no_data'],
+        :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
+        :timeout => alert['timeout'] || nil,
+        :no_data_timeframe => alert['no_data_timeframe'] || nil
+      }
+
+      prev_alert == new_alert
     end
 
   end
