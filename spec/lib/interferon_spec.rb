@@ -53,7 +53,7 @@ describe Interferon::Interferon do
 
     it 'dry run does not re-run existing alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       expect(dest).not_to receive(:create_alert)
       expect(dest).not_to receive(:remove_alert_by_id)
 
@@ -62,7 +62,7 @@ describe Interferon::Interferon do
 
     it 'dry run runs added alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       added = create_test_alert('name3', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name3').once
@@ -72,7 +72,7 @@ describe Interferon::Interferon do
 
     it 'dry run runs updated alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       added = create_test_alert('name1', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name1').once
