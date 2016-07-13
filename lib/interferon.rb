@@ -9,6 +9,7 @@ require 'interferon/alert_dsl'
 #require 'pry'  #uncomment if you're debugging
 require 'erb'
 require 'ostruct'
+require 'parallel'
 require 'set'
 require 'yaml'
 
@@ -23,12 +24,14 @@ module Interferon
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similiar hash from type => options for each alerter
-    def initialize(alerts_repo_path, groups_sources, host_sources, destinations, dry_run=false)
+    def initialize(alerts_repo_path, groups_sources, host_sources, destinations,
+                   dry_run=false, processes=nil)
       @alerts_repo_path = alerts_repo_path
       @groups_sources = groups_sources
       @host_sources = host_sources
       @destinations = destinations
       @dry_run = dry_run
+      @processes = processes
       @request_shutdown = false
     end
 
@@ -183,8 +186,8 @@ module Interferon
       existing_dry_run_alerts = []
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
-          existing_dry_run_alerts << [alert['name'], alert['id']]
-          existing_alerts.remove(name)
+          existing_dry_run_alerts << [alert['name'], [alert['id']]]
+          existing_alerts.delete(name)
         end
       end
 
@@ -298,10 +301,11 @@ module Interferon
     end
 
     def build_alerts_queue(hosts, alerts, groups)
+      alerts_queue = {}
       # create or update alerts; mark when we've done that
-      alerts_queue = Hash.new
-      alerts.each do |alert|
+      result = Parallel.map(alerts, in_processes: @processes) do |alert|
         break if @request_shutdown
+        alerts_generated = {}
         counters = {
           :errors => 0,
           :evals => 0,
@@ -329,7 +333,7 @@ module Interferon
 
           counters[:applies] += 1
           # don't define alerts twice
-          next if alerts_queue.key?(alert[:name])
+          next if alerts_generated.key?(alert[:name])
 
           # figure out who to notify
           people = Set.new(alert[:notify][:people])
@@ -338,7 +342,7 @@ module Interferon
           end
 
           # queue the alert up for creation; we clone the alert to save the current state
-          alerts_queue[alert[:name]] ||= [alert.clone, people]
+          alerts_generated[alert[:name]] = [alert.clone, people]
         end
 
         # log some of the counters
@@ -367,6 +371,11 @@ module Interferon
         else
           statsd.gauge('alerts.evaluate.never_applies', 0, :tags => ["alert:#{alert}"])
         end
+        alerts_generated
+      end
+
+      result.each do |alerts_generated|
+        alerts_queue.merge! alerts_generated
       end
       alerts_queue
     end

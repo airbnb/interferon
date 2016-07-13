@@ -107,10 +107,14 @@ module Interferon::Destinations
       alert_opts = {
         :name => alert['name'],
         :message => message,
-        :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
         :notify_no_data => alert['notify_no_data'],
         :timeout_h => nil,
       }
+
+      # Set alert to be silenced if there is a silenced set or silenced_until set
+      if alert['silenced'] or alert['silenced_until'] > Time.now
+        alert_opts[:silenced] = {"*" => nil}
+      end
 
       # allow an optional timeframe for "no data" alerts to be specified
       # (this feature is supported, even though it's not documented)
