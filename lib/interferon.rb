@@ -9,8 +9,8 @@ require 'interferon/alert_dsl'
 #require 'pry'  #uncomment if you're debugging
 require 'erb'
 require 'ostruct'
-require 'set'
 require 'parallel'
+require 'set'
 require 'yaml'
 
 module Interferon
@@ -186,7 +186,7 @@ module Interferon
       existing_dry_run_alerts = []
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
-          existing_dry_run_alerts << [alert['name'], alert['id']]
+          existing_dry_run_alerts << [alert['name'], [alert['id']]]
           existing_alerts.remove(name)
         end
       end
@@ -342,7 +342,7 @@ module Interferon
           end
 
           # queue the alert up for creation; we clone the alert to save the current state
-          alerts_generated[alert[:name]] ||= [alert.clone, people]
+          alerts_generated[alert[:name]] = [alert.clone, people]
         end
 
         # log some of the counters

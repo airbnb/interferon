@@ -1,230 +1,230 @@
 grammar DatadogQuery
-    rule datadog_query
-        alert / full_query
-    end
+  rule datadog_query
+    alert / full_query
+  end
 
-    rule integer
-        "-"? [0-9]+
-    end
+  rule integer
+    "-"? [0-9]+
+  end
 
-    rule decimal
-        "-"? [0-9]+ ("." [0-9]+)?
-    end
+  rule decimal
+    "-"? [0-9]+ ("." [0-9]+)?
+  end
 
-    rule name
-        [a-zA-Z0-9] [a-zA-Z0-9_.]*
-    end
+  rule name
+    [a-zA-Z0-9] [a-zA-Z0-9_.]*
+  end
 
-    rule ws
-        [ \t\n]
-    end
+  rule ws
+    [ \t\n]
+  end
 
-    rule qt
-        "'" / '"'
-    end
+  rule qt
+    "'" / '"'
+  end
 
-    rule metric_name
-        name
-    end
+  rule metric_name
+    name
+  end
 
-    rule scope_name
-        "*" / [a-zA-Z0-9.:_!/-]+
-    end
+  rule scope_name
+    "*" / [a-zA-Z0-9.:_!/-]+
+  end
 
-    rule scope
-        '{' ws* scope_name (ws* "," ws* scope_name)* ws* '}'
-    end
+  rule scope
+    '{' ws* scope_name (ws* "," ws* scope_name)* ws* '}'
+  end
 
-    rule group_name
-        [a-zA-Z0-9:_-]+
-    end
+  rule group_name
+    [a-zA-Z0-9:_-]+
+  end
 
-    rule group
-        '{' ws* group_name (ws* "," group_name)* ws* '}'
-    end
+  rule group
+    '{' ws* group_name (ws* "," ws* group_name)* ws* '}'
+  end
 
-    rule group_by
-        ws* 'by' [ \t]* group
-    end
+  rule group_by
+    ws* 'by' [ \t]* group
+  end
 
-    rule arithmetic_post
-        ws* arithmetic_operator ws* (full_query / decimal)
-    end
+  rule arithmetic_post
+    ws* arithmetic_operator ws* (full_query / decimal)
+  end
 
-    rule arithmetic_pre
-        integer+ ws* arithmetic_operator ws*
-    end
+  rule arithmetic_pre
+    decimal+ ws* arithmetic_operator ws*
+  end
 
-    rule series
-        (space_aggrs ":")? metric_name scope (group_by)?
-    end
+  rule series
+    (space_aggrs ":")? metric_name scope (group_by)?
+  end
 
-    rule arithmetic_operator
-        "+" / "-" / "*" / "/"
-    end
+  rule arithmetic_operator
+    "+" / "-" / "*" / "/"
+  end
 
-    rule top_convenience
-        "top5" / "top10" / "top15" / "top20"
-        "top5_max" / "top10_max" / "top15_max" / "top20_max"
-        "top5_min" / "top10_min" / "top15_min" / "top20_min"
-        "top5_last" / "top10_last" / "top15_last" / "top20_last"
-        "top5_area" / "top10_area" / "top15_area" / "top20_area"
-        "top5_l2norm" / "top10_l2norm" / "top15_l2norm" / "top20_l2norm"
-        "bottom5" / "bottom10" / "bottom15" / "bottom20"
-        "bottom5_max" / "bottom10_max" / "bottom15_max" / "bottom20_max"
-        "bottom5_min" / "bottom10_min" / "bottom15_min" / "bottom20_min"
-        "bottom5_last" / "bottom10_last" / "bottom15_last" / "bottom20_last"
-        "bottom5_area" / "bottom10_area" / "bottom15_area" / "bottom20_area"
-        "bottom5_l2norm" / "bottom10_l2norm" / "bottom15_l2norm" / "bottom20_l2norm"
-    end
+  rule top_convenience
+    "top5" / "top10" / "top15" / "top20"
+    "top5_max" / "top10_max" / "top15_max" / "top20_max"
+    "top5_min" / "top10_min" / "top15_min" / "top20_min"
+    "top5_last" / "top10_last" / "top15_last" / "top20_last"
+    "top5_area" / "top10_area" / "top15_area" / "top20_area"
+    "top5_l2norm" / "top10_l2norm" / "top15_l2norm" / "top20_l2norm"
+    "bottom5" / "bottom10" / "bottom15" / "bottom20"
+    "bottom5_max" / "bottom10_max" / "bottom15_max" / "bottom20_max"
+    "bottom5_min" / "bottom10_min" / "bottom15_min" / "bottom20_min"
+    "bottom5_last" / "bottom10_last" / "bottom15_last" / "bottom20_last"
+    "bottom5_area" / "bottom10_area" / "bottom15_area" / "bottom20_area"
+    "bottom5_l2norm" / "bottom10_l2norm" / "bottom15_l2norm" / "bottom20_l2norm"
+  end
 
-    rule functions
-        "cumsum" / "dt" / "diff" / "derivative" / "rate" /
-        "derived" / "per_second" / "per_minute" / "per_hour" /
-        "ewma_3" / "ewma_5" / "ewma_10" / "ewma_20" /
-        "median_3" / "median_5" / "median_7" / "median_9" /
-        "abs" / "log10" / "log2" / "hour_before" / "day_before" /
-        "week_before" / "month_before" / top_convenience
-    end
+  rule functions
+    "cumsum" / "dt" / "diff" / "derivative" / "rate" /
+    "derived" / "per_second" / "per_minute" / "per_hour" /
+    "ewma_3" / "ewma_5" / "ewma_10" / "ewma_20" /
+    "median_3" / "median_5" / "median_7" / "median_9" /
+    "abs" / "log10" / "log2" / "hour_before" / "day_before" /
+    "week_before" / "month_before" / top_convenience
+  end
 
-    rule top_num_series
-        integer
-    end
+  rule top_num_series
+    integer
+  end
 
-    rule top_rankings
-        "max" / "min" / "last" / "l2norm" / "area"
-    end
+  rule top_rankings
+    "max" / "min" / "last" / "l2norm" / "area"
+  end
 
-    rule top_ranking
-        (qt top_rankings qt) / top_rankings
-    end
+  rule top_ranking
+    (qt top_rankings qt) / top_rankings
+  end
 
-    rule top_orders
-        "asc" / "desc"
-    end
+  rule top_orders
+    "asc" / "desc"
+  end
 
-    rule top_offset
-        integer+
-    end
+  rule top_offset
+    integer+
+  end
 
-    rule top_order
-        (qt top_orders qt) / top_orders
-    end
+  rule top_order
+    (qt top_orders qt) / top_orders
+  end
 
-    rule top_function
-        "top" '(' full_query "," top_num_series "," top_ranking "," top_order ')'
-    end
+  rule top_function
+    "top" '(' ws* full_query ws* "," ws* top_num_series ws* "," ws* top_ranking ws* "," ws* top_order ws* ')'
+  end
 
-    rule top_offset_function
-        "top_offset" '(' full_query "," top_num_series "," top_ranking "," top_order "," top_offset ')'
-    end
+  rule top_offset_function
+    "top_offset" '(' ws* full_query ws* "," ws* top_num_series ws* "," ws* top_ranking ws* "," ws* top_order ws* "," ws* top_offset ws* ')'
+  end
 
-    rule forecast_function
-        "forecast" '(' full_query "," forecast_aggr "," seasonality "," seasons ')'
-    end
+  rule forecast_function
+    "forecast" '(' ws* full_query ws* "," ws* forecast_aggr ws* "," ws* seasonality ws* "," ws* seasons ws* ')'
+  end
 
-    rule forecast_aggrs
-        'median'
+  rule forecast_aggrs
+    'median'
 
-    end
+  end
 
-    rule forecast_aggr
-       (qt forecast_aggrs qt) / forecast_aggrs
+  rule forecast_aggr
+    (qt forecast_aggrs qt) / forecast_aggrs
 
-    end
+  end
 
-    rule seasonalities
-        "hourly" / "daily" / "weekly"
-    end
+  rule seasonalities
+    "hourly" / "daily" / "weekly"
+  end
 
-    rule seasonality
-        (qt seasonalities qt) / seasonalities
-    end
+  rule seasonality
+    (qt seasonalities qt) / seasonalities
+  end
 
-    rule seasons
-        [3-9] / ([1-9] [0-9])+
-    end
+  rule seasons
+    [3-9] / ([1-9] [0-9])+
+  end
 
-    rule rollup_methods
-        "avg" / "max" / "min" / "sum" / "count"
-    end
+  rule rollup_methods
+    "avg" / "max" / "min" / "sum" / "count"
+  end
 
-    rule rollup_method
-        (qt rollup_methods qt) / rollup_methods
-    end
+  rule rollup_method
+    (qt rollup_methods qt) / rollup_methods
+  end
 
-    rule rollup_time
-        integer
-    end
+  rule rollup_time
+    integer
+  end
 
-    rule rollup
-        "rollup" "(" rollup_method "," rollup_time ")"
-    end
+  rule rollup
+    "rollup" "(" ws* rollup_method ws* "," ws* rollup_time ws*  ")"
+  end
 
-    rule append_functions
-        "as_count" "(" ")" /
-        "as_rate" "(" ")" /
-        rollup
-    end
+  rule append_functions
+    "as_count" "(" ")" /
+    "as_rate" "(" ")" /
+    rollup
+  end
 
-    rule append_function
-        '.' append_functions
-    end
+  rule append_function
+    '.' append_functions
+  end
 
-    rule function
-        ((functions '(' full_query ')') /
-         top_function /
-         top_offset_function /
-         forecast_function) append_function*
-    end
+  rule function
+    ((functions '(' full_query ')') /
+    top_function /
+    top_offset_function /
+    forecast_function) append_function*
+  end
 
-    rule space_aggrs
-        "avg" / "max" / "min" / "sum"
-    end
+  rule space_aggrs
+    "avg" / "max" / "min" / "sum"
+  end
 
-    rule function_series
-        (arithmetic_pre)* (('(' query ')') / (function / series append_function*)) (arithmetic_post)*
-    end
+  rule function_series
+    (arithmetic_pre)* (('(' query ')') / (function / series append_function*)) (arithmetic_post)*
+  end
 
-    rule query
-        (arithmetic_pre)* function_series (arithmetic_post)*
-    end
+  rule query
+    (arithmetic_pre)* function_series (arithmetic_post)*
+  end
 
-    rule full_query
-        query / '(' ws* full_query ws* ')' 
-    end
+  rule full_query
+    query / '(' ws* full_query ws* ')'
+  end
 
-    rule time_aggrs
-        "avg" / "max" / "min" / "sum"
-    end
+  rule time_aggrs
+    "avg" / "max" / "min" / "sum"
+  end
 
-    rule time_aggr
-        time_aggrs "(" time_window ")"
-    end
+  rule time_aggr
+    time_aggrs "(" time_window ")"
+  end
 
-    rule time_window
-        "last_1m" / "last_5m" / "last_10m" / "last_15m" / "last_30m" /
-        "last_1h" / "last_2h" / "last_4h" / "last_1d" / "last_2d"
-    end
+  rule time_window
+    "last_1m" / "last_5m" / "last_10m" / "last_15m" / "last_30m" /
+    "last_1h" / "last_2h" / "last_4h" / "last_1d" / "last_2d"
+  end
 
-    rule change_aggrs
-        "change" / "pct_change"
-    end
+  rule change_aggrs
+    "change" / "pct_change"
+  end
 
-    rule change_window
-        "5m_ago" / "10m_ago" / "15m_ago" / "30m_ago" /
-        "1h_ago" / "2h_ago" / "4h_ago" / "1d_ago" / "2d_ago"
-    end
+  rule change_window
+    "5m_ago" / "10m_ago" / "15m_ago" / "30m_ago" /
+    "1h_ago" / "2h_ago" / "4h_ago" / "1d_ago" / "2d_ago"
+  end
 
-    rule alert_operator
-        "<=" / ">=" / "<" / ">" / "==" / "!="
-    end
+  rule alert_operator
+    "<=" / ">=" / "<" / ">" / "==" / "!="
+  end
 
-    rule alert_aggr
-        (change_aggrs "(" time_aggr ',' change_window ")" ) / time_aggr
-    end
+  rule alert_aggr
+    (change_aggrs "(" ws* time_aggr ws* ',' ws* change_window ws* ")" ) / time_aggr
+  end
 
-    rule alert
-        ws* alert_aggr ":" ws* full_query ws* alert_operator ws* decimal ws*
-    end
+  rule alert
+    ws* alert_aggr ":" ws* full_query ws* alert_operator ws* decimal ws*
+  end
 end
