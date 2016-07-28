@@ -113,7 +113,7 @@ module Interferon::Destinations
 
       # Set alert to be silenced if there is a silenced set or silenced_until set
       if alert['silenced'] or alert['silenced_until'] > Time.now
-        alerts_opts[:silenced] = {"*" => nil}
+        alert_opts[:silenced] = {"*" => nil}
       end
 
       # allow an optional timeframe for "no data" alerts to be specified
