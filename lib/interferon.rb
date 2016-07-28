@@ -187,7 +187,7 @@ module Interferon
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
           existing_dry_run_alerts << [alert['name'], [alert['id']]]
-          existing_alerts.remove(name)
+          existing_alerts.delete(name)
         end
       end
 
