@@ -9,6 +9,7 @@ require 'interferon/alert_dsl'
 #require 'pry'  #uncomment if you're debugging
 require 'erb'
 require 'ostruct'
+require 'parallel'
 require 'set'
 require 'yaml'
 
@@ -23,12 +24,14 @@ module Interferon
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similiar hash from type => options for each alerter
-    def initialize(alerts_repo_path, groups_sources, host_sources, destinations, dry_run=false)
+    def initialize(alerts_repo_path, groups_sources, host_sources, destinations,
+                   dry_run=false, processes=nil)
       @alerts_repo_path = alerts_repo_path
       @groups_sources = groups_sources
       @host_sources = host_sources
       @destinations = destinations
       @dry_run = dry_run
+      @processes = processes
       @request_shutdown = false
     end
 
@@ -183,8 +186,8 @@ module Interferon
       existing_dry_run_alerts = []
       existing_alerts.each do |name, alert|
         if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
-          existing_dry_run_alerts << [alert['name'], alert['id']]
-          existing_alerts.remove(name)
+          existing_dry_run_alerts << [alert['name'], [alert['id']]]
+          existing_alerts.delete(name)
         end
       end
 
@@ -193,7 +196,7 @@ module Interferon
         existing_alert = existing_alerts[name]
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + name
         existing_alert['name'] = dry_run_alert_name
-        existing_alert['id'] = nil
+        existing_alert['id'] = [nil]
         existing_alerts[dry_run_alert_name] = existing_alerts.delete(name)
       end
 
@@ -216,7 +219,15 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        old_alerts = to_remove[alert['name']]
+
+        if not old_alerts.nil?
+          if old_alerts['id'].length == 1
+            to_remove.delete(alert['name'])
+          else
+            old_alerts['id'] = old_alerts['id'].drop(0)
+          end
+        end
       end
 
       # Clean up alerts not longer being generated
@@ -227,8 +238,10 @@ module Interferon
 
       # Clean up dry-run created alerts
       (created_alerts + existing_dry_run_alerts).each do |alert_id_pair|
-        alert_id = alert_id_pair[1]
-        dest.remove_alert_by_id(alert_id)
+        alert_ids = alert_id_pair[1]
+        alert_ids.each do |alert_id|
+          dest.remove_alert_by_id(alert_id)
+        end
       end
 
     end
@@ -246,7 +259,15 @@ module Interferon
       to_remove = existing_alerts.dup
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
-        to_remove.delete(alert['name'])
+        old_alerts = to_remove[alert['name']]
+
+        if not old_alerts.nil?
+          if alert['id'].length == 1
+            to_remove.delete(alert['name'])
+          else
+            old_alerts['id'] = old_alerts['id'].drop(0)
+          end
+        end
       end
 
       # Clean up alerts not longer being generated
@@ -280,10 +301,11 @@ module Interferon
     end
 
     def build_alerts_queue(hosts, alerts, groups)
+      alerts_queue = {}
       # create or update alerts; mark when we've done that
-      alerts_queue = Hash.new
-      alerts.each do |alert|
+      result = Parallel.map(alerts, in_processes: @processes) do |alert|
         break if @request_shutdown
+        alerts_generated = {}
         counters = {
           :errors => 0,
           :evals => 0,
@@ -311,7 +333,7 @@ module Interferon
 
           counters[:applies] += 1
           # don't define alerts twice
-          next if alerts_queue.key?(alert[:name])
+          next if alerts_generated.key?(alert[:name])
 
           # figure out who to notify
           people = Set.new(alert[:notify][:people])
@@ -320,7 +342,7 @@ module Interferon
           end
 
           # queue the alert up for creation; we clone the alert to save the current state
-          alerts_queue[alert[:name]] ||= [alert.clone, people]
+          alerts_generated[alert[:name]] = [alert.clone, people]
         end
 
         # log some of the counters
@@ -349,6 +371,11 @@ module Interferon
         else
           statsd.gauge('alerts.evaluate.never_applies', 0, :tags => ["alert:#{alert}"])
         end
+        alerts_generated
+      end
+
+      result.each do |alerts_generated|
+        alerts_queue.merge! alerts_generated
       end
       alerts_queue
     end
@@ -365,12 +392,26 @@ module Interferon
 
     def self.same_alerts(dest, alert_people_pair, alert_api_json)
       alert, people = alert_people_pair
-      query1 = alert['metric']['datadog_query'].strip
-      message1 = dest.generate_message(alert['message'], people).strip
-      query2 = alert_api_json['query'].strip
-      message2 = alert_api_json['message'].strip
 
-      query1 == query2 and message1 == message2
+      prev_alert = {
+        :query => alert_api_json['query'].strip,
+        :message => alert_api_json['message'].strip,
+        :notify_no_data => alert_api_json['notify_no_data'],
+        :silenced => alert_api_json['silenced'],
+        :timeout => alert_api_json['timeout_h'],
+        :no_data_timeframe => alert_api_json['no_data_timeframe']
+      }
+
+      new_alert = {
+        :query => alert['metric']['datadog_query'].strip,
+        :message => dest.generate_message(alert['message'], people).strip,
+        :notify_no_data => alert['notify_no_data'],
+        :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
+        :timeout => alert['timeout'] || nil && [1, alert['timeout'].to_i / 3600].max,
+        :no_data_timeframe => alert['no_data_timeframe'] || nil
+      }
+
+      prev_alert == new_alert
     end
 
   end

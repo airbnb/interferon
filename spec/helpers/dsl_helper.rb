@@ -6,7 +6,8 @@ module Interferon
     def get_or_set(field, val, block, default)
       @hash ||= Hash.new
       if val.nil?
-        return @hash[field]
+        f = @hash[field]
+        f.nil? ? default : f
       else
         @hash[field] = val
       end
@@ -26,6 +27,14 @@ module Interferon
 
     def id(v = nil, &block)
       get_or_set(:@id, v, block, '')
+    end
+
+    def silenced(v = nil, &block)
+      get_or_set(:@silenced, v, block, false)
+    end
+
+    def silenced_until(v = nil, &block)
+      get_or_set(:@silenced_until, v && Time.parse(v), block, Time.at(0))
     end
   end
 

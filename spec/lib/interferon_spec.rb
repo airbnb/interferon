@@ -37,9 +37,23 @@ describe Interferon::Interferon do
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be true
     end
 
+    it "would be dry run if alert silenced changed" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', false, true)
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2', false, false)
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "would be dry run if alert notify_no_data changed" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', false, false)
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2', true, false)
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
     it 'dry run does not re-run existing alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       expect(dest).not_to receive(:create_alert)
       expect(dest).not_to receive(:remove_alert_by_id)
 
@@ -48,20 +62,20 @@ describe Interferon::Interferon do
 
     it 'dry run runs added alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       added = create_test_alert('name3', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
-      expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name3').once
+      expect(dest).to receive(:remove_alert_by_id).with('3').once
 
       interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {})
     end
 
     it 'dry run runs updated alerts' do
       alerts = mock_existing_alerts
-      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true)
+      interferon = Interferon::Interferon.new(nil,nil,nil,nil,true,0)
       added = create_test_alert('name1', 'testquery3', '')
       expect(dest).to receive(:create_alert).once.and_call_original
-      expect(dest).to receive(:remove_alert_by_id).with('[-dry-run-]name1').once
+      expect(dest).to receive(:remove_alert_by_id).with('1').once
 
       interferon.update_alerts_on_destination(dest, ['host'], [added], {})
     end
@@ -81,7 +95,8 @@ describe Interferon::Interferon do
 
       def create_alert(alert, people)
         name = alert['name']
-        [name, name]
+        id = [alert['name'][-1]]
+        [name, id]
       end
 
       def existing_alerts
@@ -90,11 +105,16 @@ describe Interferon::Interferon do
     end
   end
 
-  def mock_alert_json(name, datadog_query, message)
-    {'name'=> name,'query'=> datadog_query,'message'=> message}
+  def mock_alert_json(name, datadog_query, message, notify_no_data=false, silenced=false)
+    { 'name'=> name,
+      'query'=> datadog_query,
+      'message'=> message,
+      'notify_no_data' => notify_no_data,
+      'silenced' => silenced
+    }
   end
 
-  def create_test_alert(name, datadog_query, message)
+  def create_test_alert(name, datadog_query, message, notify_no_data=false, silenced=false)
     alert_dsl = MockAlertDSL.new
     metric_dsl = MockMetricDSL.new
     metric_dsl.datadog_query(datadog_query)
@@ -102,6 +122,8 @@ describe Interferon::Interferon do
     alert_dsl.name(name)
     alert_dsl.applies(true)
     alert_dsl.message(message)
+    alert_dsl.silenced(silenced)
+    alert_dsl.notify_no_data(notify_no_data)
     notify_dsl = MockNotifyDSL.new
     notify_dsl.groups(['a'])
     alert_dsl.notify(notify_dsl)
