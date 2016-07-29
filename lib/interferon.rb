@@ -225,7 +225,7 @@ module Interferon
           if old_alerts['id'].length == 1
             to_remove.delete(alert['name'])
           else
-            old_alerts['id'] = old_alerts['id'].drop(0)
+            old_alerts['id'] = old_alerts['id'].drop(1)
           end
         end
       end
@@ -265,7 +265,7 @@ module Interferon
           if alert['id'].length == 1
             to_remove.delete(alert['name'])
           else
-            old_alerts['id'] = old_alerts['id'].drop(0)
+            old_alerts['id'] = old_alerts['id'].drop(1)
           end
         end
       end
