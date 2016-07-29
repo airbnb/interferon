@@ -25,16 +25,16 @@ describe Interferon::Interferon do
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
 
-    it "detects a change if alert silenced is different" do
-      alert1 = create_test_alert('name1', 'testquery1', 'message1', silenced: true)
-      alert2 = mock_alert_json('name2', 'testquery2', 'message2', silenced: false)
+    it "detects a change if alert notify_no_data is different" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', false)
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2', true)
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
 
-    it "detects a change if alert notify_no_data is different" do
-      alert1 = create_test_alert('name1', 'testquery1', 'message1', notify_no_data: false)
-      alert2 = mock_alert_json('name2', 'testquery2', 'message2', notify_no_data: true)
+    it "detects a change if alert silenced is different" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', false, true)
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2', false, false)
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
@@ -89,7 +89,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', id: [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -104,7 +104,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts when creating new alert' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', id: [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -167,7 +167,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', id: [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -182,7 +182,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts when creating new alert' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', id: [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -190,7 +190,7 @@ describe Interferon::Interferon do
 
       added = create_test_alert('name1', 'testquery1', '')
 
-      expect(dest).to receive(:remove_alert).with(mock_alert_json('name1', 'testquery1', '', id: [2, 3]))
+      expect(dest).to receive(:remove_alert).with(mock_alert_json('name1', 'testquery1', '', false, false, [2, 3]))
       expect(dest).to receive(:remove_alert).with(existing_alerts['name2'])
 
       interferon.update_alerts_on_destination(dest, ['host'], [added], {})
@@ -221,7 +221,7 @@ describe Interferon::Interferon do
     end
   end
 
-  def mock_alert_json(name, datadog_query, message, notify_no_data: false, silenced: false, id: nil)
+  def mock_alert_json(name, datadog_query, message, notify_no_data=false, silenced=false, id=nil)
     { 'name'=> name,
       'query'=> datadog_query,
       'message'=> message,
@@ -231,7 +231,7 @@ describe Interferon::Interferon do
     }
   end
 
-  def create_test_alert(name, datadog_query, message, notify_no_data: false, silenced: false)
+  def create_test_alert(name, datadog_query, message, notify_no_data=false, silenced=false)
     alert_dsl = MockAlertDSL.new
     metric_dsl = MockMetricDSL.new
     metric_dsl.datadog_query(datadog_query)
