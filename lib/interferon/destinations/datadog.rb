@@ -107,6 +107,7 @@ module Interferon::Destinations
       alert_opts = {
         :name => alert['name'],
         :message => message,
+        :silenced => {},
         :notify_no_data => alert['notify_no_data'],
         :timeout_h => nil,
       }

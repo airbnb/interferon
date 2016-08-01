@@ -407,7 +407,7 @@ module Interferon
         :message => dest.generate_message(alert['message'], people).strip,
         :notify_no_data => alert['notify_no_data'],
         :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
-        :timeout => alert['timeout'] || nil && [1, alert['timeout'].to_i / 3600].max,
+        :timeout => (alert['timeout'] && [1, alert['timeout'].to_i / 3600].max) ||  nil,
         :no_data_timeframe => alert['no_data_timeframe'] || nil
       }
 
