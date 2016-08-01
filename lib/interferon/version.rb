@@ -1,3 +1,3 @@
 module Interferon
-  VERSION = "0.0.17pre"
+  VERSION = "0.0.17pre2"
 end

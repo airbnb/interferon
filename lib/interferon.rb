@@ -191,6 +191,11 @@ module Interferon
         end
       end
 
+      alerts_queue = build_alerts_queue(hosts, alerts, groups)
+      updates_queue = alerts_queue.reject do |name, alert_people_pair|
+        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      end
+
       # Add dry-run prefix to alerts and delete id to avoid impacting real alerts
       existing_alerts.keys.each do |name|
         existing_alert = existing_alerts[name]
@@ -200,16 +205,12 @@ module Interferon
         existing_alerts[dry_run_alert_name] = existing_alerts.delete(name)
       end
 
-      # Build new queue with dry-run prefixes
-      alerts_queue = build_alerts_queue(hosts, alerts, groups)
+      # Build new queue with dry-run prefixes and ensure they are silenced
       alerts_queue.each do |name, alert_people_pair|
         alert = alert_people_pair[0]
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
         alert.change_name(dry_run_alert_name)
-      end
-
-      updates_queue = alerts_queue.reject do |name, alert_people_pair|
-        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+        alert.silence()
       end
 
       # Create alerts in destination
