@@ -11,6 +11,7 @@ module Interferon::GroupSources
 
     def list_groups
       groups = {}
+      aliases = {}
 
       @paths.each do |path|
         path = File.expand_path(path)
@@ -28,8 +29,22 @@ module Interferon::GroupSources
             log.warn "error reading group file #{group_file}: #{e}"
           else
             group = group.to_ruby
-            groups[group['name']] = group['people'] || []
+            if group['people']
+              groups[group['name']] = group['people'] || []
+            elsif group['alias_for']
+              aliases[group['name']] = {:group => group['alias_for'], :group_file => group_file}
+            end
           end
+        end
+      end
+
+      aliases.each do |aliased_group, group_info|
+        group = group_info[:group]
+        group_file = group_info[:group_file]
+        if groups.include?(group)
+          groups[aliased_group] = groups[group]
+        else
+          log.warn "Alias not found for #{group} but used by #{aliased_group} in #{group_file}"
         end
       end
 
