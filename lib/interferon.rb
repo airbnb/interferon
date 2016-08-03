@@ -210,7 +210,7 @@ module Interferon
         alert = alert_people_pair[0]
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
         alert.change_name(dry_run_alert_name)
-        alert.silence()
+        alert.silence
       end
 
       # Create alerts in destination
@@ -222,7 +222,7 @@ module Interferon
         alert = alert_people_pair[0]
         old_alerts = to_remove[alert['name']]
 
-        if not old_alerts.nil?
+        if !old_alerts.nil?
           if old_alerts['id'].length == 1
             to_remove.delete(alert['name'])
           else
@@ -262,7 +262,7 @@ module Interferon
         alert = alert_people_pair[0]
         old_alerts = to_remove[alert['name']]
 
-        if not old_alerts.nil?
+        if !old_alerts.nil?
           if old_alerts['id'].length == 1
             to_remove.delete(alert['name'])
           else
@@ -355,7 +355,7 @@ module Interferon
         end
 
         # did the alert fail to evaluate on all hosts?
-        if counters[:errors] == counters[:hosts] and !last_eval_error.nil?
+        if counters[:errors] == counters[:hosts] && !last_eval_error.nil?
           log.error "alert #{alert} failed to evaluate in the context of all hosts!"
           log.error "last error on alert #{alert}: #{last_eval_error}"
 
@@ -408,7 +408,7 @@ module Interferon
         :message => dest.generate_message(alert['message'], people).strip,
         :notify_no_data => alert['notify_no_data'],
         :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
-        :timeout => (alert['timeout'] && [1, alert['timeout'].to_i / 3600].max) ||  nil,
+        :timeout => alert['timeout'] ? [1, alert['timeout'].to_i / 3600].max : nil,
         :no_data_timeframe => alert['no_data_timeframe'] || nil
       }
 

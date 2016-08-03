@@ -113,7 +113,7 @@ module Interferon::Destinations
       }
 
       # Set alert to be silenced if there is a silenced set or silenced_until set
-      if alert['silenced'] or alert['silenced_until'] > Time.now
+      if alert['silenced'] || alert['silenced_until'] > Time.now
         alert_opts[:silenced] = true
       end
 
@@ -163,7 +163,7 @@ module Interferon::Destinations
           )
           # Unmute existing alerts that have been unsilenced.
           # Datadog does not allow updates to silencing via the update_alert API call.
-          if existing_alert['silenced'] and not alert_opts[:silenced]
+          if existing_alert['silenced'] && !alert_opts[:silenced]
             @dog.unmute_monitor(id)
           end
         end
@@ -191,7 +191,7 @@ module Interferon::Destinations
         @stats[:alerts_to_be_deleted] += 1
         log.info("deleting alert: #{alert['name']}")
 
-        if not @dry_run
+        if !@dry_run
           alert['id'].each do |alert_id|
             resp = @dog.delete_alert(alert_id)
             code = resp[0].to_i
@@ -233,7 +233,7 @@ module Interferon::Destinations
 
     def log_datadog_response_code(resp, code, action, alert=nil)
       # log whenever we've encountered errors
-      if code != 200 and !alert.nil?
+      if code != 200 && !alert.nil?
         api_errors << "#{code.to_s} on alert #{alert['name']}"
       end
 
