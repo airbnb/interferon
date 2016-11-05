@@ -22,7 +22,7 @@ module Interferon
 
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
-    # destinations is a similiar hash from type => options for each alerter
+    # destinations is a similar hash from type => options for each alerter
     def initialize(alerts_repo_path, groups_sources, host_sources, destinations)
       @alerts_repo_path = alerts_repo_path
       @groups_sources = groups_sources
