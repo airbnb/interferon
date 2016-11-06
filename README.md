@@ -74,7 +74,7 @@ Here's a chart explaining the datadog metric syntax ([generated via asciiflow](h
   |      | |-----------------------------------|            +------------------------------------+
   |      | | * max, min, avg, sum              |            |trigger a separate alert for each   |
   |      + +-----------------------------------+            |different value of these tags the   |
-  | +----+----------------------------------------------+   |entire `by {}` clause can be ommited|
+  | +----+----------------------------------------------+   |entire `by {}` clause can be omitted|
   | | the interval to look at; always starts with last_ |   +------------------------------------+
   | |---------------------------------------------------|
   | | * 5m, 10m, 15m, 30m                               |
