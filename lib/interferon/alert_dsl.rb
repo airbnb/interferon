@@ -1,3 +1,4 @@
+require 'interferon/work_hours_helper'
 
 module Interferon
   module DSLMixin
@@ -45,6 +46,15 @@ module Interferon
 
     def silenced_until(v = nil, &block)
       get_or_set(:@silenced_until, v && Time.parse(v), block, Time.at(0))
+    end
+
+    def is_work_hour?(args = {})
+      # Args can contain
+      # :hours => range of work hours (0 to 23h), for example (9..16)
+      # :days => range of week days (0 = sunday), for example (1..5) (Monday to Friday)
+      # :timezone => example 'America/Los_Angeles'
+      # 9 to 5 Monday to Friday in PST is the default
+      WorkHoursHelper.is_work_hour?(Time.now.utc, args)
     end
 
     def notify_no_data(v = nil, &block)
