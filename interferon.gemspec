@@ -20,6 +20,10 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency "dogapi", "~> 1.11", ">= 1.11.1"
   gem.add_runtime_dependency "aws-sdk", "~> 1.35", ">= 1.35.1"
   gem.add_runtime_dependency "dogstatsd-ruby", "~> 1.4", ">= 1.4.1"
+  gem.add_runtime_dependency "diffy", "~> 3.1.0", ">= 3.1.0"
+  gem.add_runtime_dependency "parallel", "~> 1.9", ">= 1.9.0"
+  gem.add_runtime_dependency "nokogiri", "< 1.7.0"
+  gem.add_runtime_dependency "tzinfo", "~> 1.2.2", ">= 1.2.2"
 
   gem.add_development_dependency "rspec", "~> 3.2"
   gem.add_development_dependency "pry", "~> 0.10"

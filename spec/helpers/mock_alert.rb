@@ -1,6 +1,7 @@
 module Interferon
   class MockAlert < Alert
     def initialize(dsl)
+      @filename = 'MOCKALERT'
       @dsl = dsl
     end
 
