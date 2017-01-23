@@ -5,7 +5,7 @@
 This repo contains the interferon gem.
 This gem enables you to store your alerts configuration in code.
 You should create your own repository, with a `Gemfile` which imports the interferon gem.
-For an example of such a repository, along with example configuration and alerts files, see https://www.github.com/airbnb/alerts_example
+For an example of such a repository, along with example configuration and alerts files, see https://www.github.com/airbnb/alerts
 
 ## Running This Gem ##
 
