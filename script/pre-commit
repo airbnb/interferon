@@ -1,0 +1,73 @@
+#!/usr/bin/env ruby
+
+require 'json'
+require 'yaml'
+
+# put the reasons why a commit is rejected into this array; if
+# it is empty, the commit can go forward
+reasons = []
+
+# let's pick out which files were added/modified in this commit.
+diff = `git diff-index --name-status --cached HEAD`
+files = diff.split("\n").map(&:split)
+
+added_files = files.
+  select { |(status, name)| status == 'A' }.
+  map { |(status, name)| name }.
+  compact
+
+modified_files = files.
+  select {|(status, name)| status != 'D'}. # ignore deleted files
+  map {|(status, name)| name}.
+  compact
+
+# check for large files
+added_files.each do |file|
+  size_in_kb = `du -k #{file}`.strip.split.first.to_i
+  if size_in_kb > 1024
+    reasons << "#{file} is greater than 1 MB in size"
+  end
+end
+
+# Make sure Gemfile.lock was updated if Gemfile changed.
+if modified_files.include?('Gemfile') && !modified_files.include?('Gemfile.lock')
+  reasons << 'You modified the Gemfile, but Gemfile.lock did not change!'
+end
+
+# Check Ruby syntax
+modified_files.select {|f| f.match /\.((rb)|(rake))$/}.each do |file|
+  result = `ruby -c #{file} 2>&1`
+
+  if $? != 0
+    reasons << "ruby file #{file} failed syntax check"
+  end
+end
+
+# Check JSON syntax
+modified_files.select {|f| f.match /(\.json)$/}.each do |file|
+  begin
+    JSON.parse(File.read(file))
+  rescue StandardError => e
+    reasons << "JSON file #{file} contains invalid JSON"
+  end
+end
+
+# Check YAML syntax
+modified_files.select {|f| f.match /(\.yaml)$/}.each do |file|
+  begin
+    YAML.parse(File.read(file))
+  rescue YAML::SyntaxError => e
+    reasons << "YAML file #{file} has invalid syntax: #{e.inspect}"
+  rescue StandardError => e
+    reasons << "Could not read YAML file #{file}: #{e}"
+  end
+end
+
+unless reasons.empty?
+  puts 'Your commit failed the pre-commit hook! Some raisins:'
+  reasons.each do |r|
+    puts "\t* #{r}"
+  end
+  puts 'Did not commit.'
+  exit 1
+end

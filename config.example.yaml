@@ -1,0 +1,38 @@
+---
+verbose_logging: true
+alerts_repo_path: "/Users/igor47/repos/alerts"
+group_sources:
+  - type: "filesystem"
+    enabled: true
+    options:
+      paths: ["/Users/igor47/repos/alerts/groups"]
+
+host_sources:
+  - type: "aws_rds"
+    enabled: false
+    options:
+      regions: []
+      access_key_id: "AKIAsomething"
+      secret_access_key: "dontcheckthisinaccidentally!"
+
+  - type: "aws_dynamo"
+    enabled: false
+    options:
+      regions: []
+      access_key_id: "AKIAsomething"
+      secret_access_key: "dontcheckthisinaccidentally!"
+
+  - type: "aws_elasticache"
+    enabled: false
+    options:
+      regions: []
+      access_key_id: "AKIAsomething"
+      secret_access_key: "dontcheckthisinaccidentally!"
+
+destinations:
+  - type: "datadog"
+    enabled: true
+    options:
+      app_key: "fillmein"
+      api_key: "alsomissing"
+      api_timeout: 15
