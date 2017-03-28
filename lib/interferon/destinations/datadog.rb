@@ -119,7 +119,7 @@ module Interferon::Destinations
 
       # Set alert to be silenced if there is a silenced set or silenced_until set
       if alert['silenced'] || alert['silenced_until'] > Time.now
-        alert_opts[:options][:silenced] = true
+        alert_opts[:options][:silenced] = {"*": nil}
       end
 
       # allow an optional timeframe for "no data" alerts to be specified
@@ -174,7 +174,7 @@ module Interferon::Destinations
           )
           # Unmute existing alerts that have been unsilenced.
           # Datadog does not allow updates to silencing via the update_alert API call.
-          if existing_alert['silenced'] && !alert_opts[:silenced]
+          if existing_alert['silenced'] && !alert_opts[:options][:silenced]
             @dog.unmute_monitor(id)
           end
         end
@@ -189,7 +189,7 @@ module Interferon::Destinations
         # assume this was a success
         @stats[:alerts_created] += 1 if action == :creating
         @stats[:alerts_updated] += 1 if action == :updating
-        @stats[:alerts_silenced] += 1 if alert_opts[:silenced]
+        @stats[:alerts_silenced] += 1 if alert_opts[:options][:silenced]
       end
 
       id = resp[1].nil? ? nil : [resp[1]['id']]

@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'erb'
 require 'yaml'
 require 'optparse'
 require 'interferon'
@@ -26,7 +27,8 @@ end
 
 def parseconfig(filename)
   begin
-    c = YAML::parse(File.read(filename))
+    e = ERB.new(File.read(filename)).result
+    c = YAML::parse(e)
   rescue Errno::ENOENT => e
     raise ArgumentError, "config file does not exist:\n#{e.inspect}"
   rescue Errno::EACCES => e

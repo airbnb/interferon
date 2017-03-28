@@ -7,6 +7,7 @@ This is a fork of https://github.com/airbnb/interferon with the following change
 * added support for thresholds
 * fixed all the options being passed to the monitor api
 * flagging monitors as locked
+* runs the config file through ERB for sekrits
 
 Upload new gem versions to packagecloud in `instructure/internal`.
 
