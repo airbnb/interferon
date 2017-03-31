@@ -9,7 +9,7 @@ module Interferon::Destinations
     include ::Interferon::Logging
 
     attr_accessor :concurrency
-    ALERT_KEY = 'Love, (Robo Ops)[https://instructure.atlassian.net/wiki/display/IOPS/Monitors].'
+    ALERT_KEY = 'Regards, [Robo Ops](https://instructure.atlassian.net/wiki/display/IOPS/Monitors).'
 
     def initialize(options)
       %w{app_key api_key}.each do |req|
