@@ -121,6 +121,7 @@ module Interferon::Destinations
         :message => message,
         :silenced => false,
         :notify_no_data => alert['notify_no_data'],
+        :notify_audit => alert['notify_audit'],
         :timeout_h => nil,
       }
 

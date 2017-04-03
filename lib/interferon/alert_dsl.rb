@@ -65,6 +65,10 @@ module Interferon
       get_or_set(:@no_data_timeframe, v, block, false)
     end
 
+    def notify_audit(v = nil, &block)
+      get_or_set(:@notify_audit, v, block, false)
+    end
+
     def timeout(v = nil, &block)
       get_or_set(:@timeout, v, block, false)
     end
