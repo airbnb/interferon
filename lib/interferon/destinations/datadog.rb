@@ -122,6 +122,9 @@ module Interferon::Destinations
         alert_opts[:options][:silenced] = {"*": nil}
       end
 
+      # Force notify_audit to false when dry-run
+      alert_opts[:options][:notify_audit] = false if @dry_run
+
       # allow an optional timeframe for "no data" alerts to be specified
       # (this feature is supported, even though it's not documented)
       alert_opts[:options][:no_data_timeframe] = alert['no_data_timeframe'] if alert['no_data_timeframe']
