@@ -38,7 +38,9 @@ module Interferon::Destinations
       @dry_run = options['dry_run']
 
       # create datadog alerts 10 at a time
-      @concurrency = 10
+      @concurrency = options['concurrency'] || 10
+      # configure retries
+      @retries = options['retries'] || 3
 
       @stats = {
         :alerts_created => 0,
@@ -63,16 +65,26 @@ module Interferon::Destinations
       [message, ALERT_KEY, people.map{ |p| "@#{p}" }].flatten.join("\n")
     end
 
+    def get_existing_alerts
+      resp = @dog.get_all_alerts()
+
+      code = resp[0].to_i
+      if code != 200
+        raise "Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}"
+      end
+      resp[1]['alerts']
+    end
+
     def existing_alerts
       unless @existing_alerts
-        resp = @dog.get_all_alerts()
-
-        code = resp[0].to_i
-        if code != 200
-          raise "Failed to retrieve existing alerts from datadog. #{code.to_s}: #{resp[1].inspect}"
+        retries = @retries
+        begin
+          alerts = get_existing_alerts
+        rescue
+          retries -= 1
+          retry if retries >= 0
+          raise
         end
-
-        alerts = resp[1]['alerts']
 
         # key alerts by name
         @existing_alerts = {}
@@ -111,6 +123,12 @@ module Interferon::Destinations
         :notify_no_data => alert['notify_no_data'],
         :timeout_h => nil,
       }
+
+      if @dry_run
+        # Datadog may have a race condition where alerts created in a bad state may be triggered
+        # during the dry-run creation process. Delete people from dry-run alerts to avoid this
+        alert_opts[:message] = generate_message(alert['message'], [])
+      end
 
       # Set alert to be silenced if there is a silenced set or silenced_until set
       if alert['silenced'] || alert['silenced_until'] > Time.now
@@ -234,7 +252,7 @@ module Interferon::Destinations
     def log_datadog_response_code(resp, code, action, alert=nil)
       # log whenever we've encountered errors
       if code != 200 && !alert.nil?
-        api_errors << "#{code.to_s} on alert #{alert['name']}"
+        api_errors << "#{code} on alert #{alert['name']}"
       end
 
       # client error
