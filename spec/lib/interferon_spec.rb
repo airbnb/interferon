@@ -41,7 +41,7 @@ describe Interferon::Interferon do
 
     it "does not detect a change when alert datadog query and message are the same" do
       alert1 = create_test_alert('name1', 'testquery1', 'message1')
-      alert2 = mock_alert_json('name1', 'testquery1', "message1\nThis alert was created via the alerts framework")
+      alert2 = mock_alert_json('name1', 'testquery1', "message1\nRegards, [Robo Ops](https://instructure.atlassian.net/wiki/display/IOPS/Monitors).")
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be true
     end
