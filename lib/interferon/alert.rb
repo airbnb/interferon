@@ -16,7 +16,6 @@ module Interferon
     def evaluate(hostinfo)
       dsl = AlertDSL.new(hostinfo)
       dsl.instance_eval(@text, @filename, 1)
-      dsl.name(dsl.name.strip)
       @dsl = dsl
 
       # return the alert and not the DSL object, which is private

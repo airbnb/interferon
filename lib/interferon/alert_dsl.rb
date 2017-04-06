@@ -19,12 +19,12 @@ module Interferon
       if val.nil? && block.nil?
         f = instance_variable_get(field)
         f.nil? ? default : f
-      elsif val.nil?
-        instance_variable_set(field, block.call)
-      elsif block.nil?
-        instance_variable_set(field, val)
-      else
+      elsif !val.nil? && !block.nil?
         raise ArgumentError, "You must pass either a value or a block but not both to #{field}"
+      else
+        f = val.nil? ? block.call : val
+        f = yield(f) if block_given?
+        instance_variable_set(field, f)
       end
     end
   end
@@ -33,19 +33,31 @@ module Interferon
     include DSLMixin
 
     def name(v = nil, &block)
-      get_or_set(:@name, v, block, '')
+      get_or_set(:@name, v, block, '') { |val| val.strip }
     end
 
     def message(v = nil, &block)
       get_or_set(:@message, v, block, '')
     end
 
-    def silenced(v = nil, &block)
-      get_or_set(:@silenced, v, block, false)
+    def monitor_type(v = nil, &block)
+      get_or_set(:@monitor_type, v, block, 'metric alert')
     end
 
-    def silenced_until(v = nil, &block)
-      get_or_set(:@silenced_until, v && Time.parse(v), block, Time.at(0))
+    def applies(v = nil, &block)
+      get_or_set(:@applies, v, block, false)
+    end
+
+    def silenced(v = nil, &block)
+      get_or_set(:@silenced, v, block, {}) do |val|
+        if val.is_a? Hash
+          val
+        elsif val == true
+          { "*" => nil }
+        else
+          {}
+        end
+      end
     end
 
     def is_work_hour?(args = {})
@@ -62,15 +74,24 @@ module Interferon
     end
 
     def no_data_timeframe(v = nil, &block)
-      get_or_set(:@no_data_timeframe, v, block, false)
+      get_or_set(:@no_data_timeframe, v, block, nil)
     end
 
     def timeout(v = nil, &block)
-      get_or_set(:@timeout, v, block, false)
+      get_or_set(:@timeout, v, block, nil)
     end
 
-    def applies(v = nil, &block)
-      get_or_set(:@applies, v, block, false)
+    def timeout_h
+      # timeout is in seconds, but set it to 1 hour at least
+      timeout ? [1, timeout.to_i / 3600].max : nil
+    end
+
+    def thresholds(v = nil, &block)
+      get_or_set(:@thresholds, v, block, nil)
+    end
+
+    def require_full_window(v = nil, &block)
+      get_or_set(:@require_full_window, v, block, nil)
     end
 
     def notify(v = nil)
@@ -92,13 +113,17 @@ module Interferon
     def groups(v = nil, &block)
       get_or_set(:@groups, v, block, [])
     end
+
+    def audit(v = nil, &block)
+      get_or_set(:@audit, v, block, true)
+    end
   end
 
   class MetricDSL
     include DSLMixin
 
     def datadog_query(v = nil, &block)
-      get_or_set(:@datadog_query, v, block, '')
+      get_or_set(:@datadog_query, v, block, '') { |val| val.strip }
     end
   end
 end
