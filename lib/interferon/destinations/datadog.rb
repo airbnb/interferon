@@ -1,6 +1,8 @@
 require 'diffy'
 require 'dogapi'
+require 'parallel'
 require 'set'
+require 'thread'
 
 Diffy::Diff.default_format = :text
 
@@ -37,8 +39,11 @@ module Interferon::Destinations
       @existing_alerts = nil
       @dry_run = options['dry_run']
 
-      # create datadog alerts 10 at a time
+      # Datadog communication threads
       @concurrency = options['concurrency'] || 10
+      # Fetch page size
+      @page_size = options['page_size'] || 1000
+
       # configure retries
       @retries = options['retries'] || 3
 
@@ -66,25 +71,39 @@ module Interferon::Destinations
     end
 
     def get_existing_alerts
-      resp = @dog.get_all_monitors()
+      alerts = Queue.new
+      has_more = true
 
-      code = resp[0].to_i
-      if code != 200
-        raise "Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}"
+      Parallel.map_with_index(-> { has_more || Parallel::Stop },
+                              in_threads: @concurrency) do |_, page|
+        successful = false
+        @retries.downto(0) do
+          resp = @dog.get_all_monitors(page: page, page_size: @page_size)
+          code = resp[0].to_i
+          if code != 200
+            log.info("Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}")
+          else
+            alerts_page = resp[1]
+            if alerts_page.length < @page_size
+              has_more = false
+            end
+            alerts_page.map { |alert| alerts.push(alert) }
+            successful = true
+            break
+          end
+        end
+
+        if !successful
+          # Out of retries
+          raise "Retries exceeded for fetching data from datadog."
+        end
       end
-      resp[1]
+      alerts.size.times.map { alerts.pop }
     end
 
     def existing_alerts
       unless @existing_alerts
-        retries = @retries
-        begin
-          alerts = get_existing_alerts
-        rescue
-          retries -= 1
-          retry if retries >= 0
-          raise
-        end
+        alerts = get_existing_alerts
 
         # key alerts by name
         @existing_alerts = {}
@@ -119,6 +138,7 @@ module Interferon::Destinations
 
       # create the hash of options to send to datadog
       alert_options = {
+        :notify_audit => alert['notify']['audit'],
         :notify_no_data => alert['notify_no_data'],
         :no_data_timeframe => alert['no_data_timeframe'],
         :silenced => alert['silenced'],
@@ -155,7 +175,7 @@ module Interferon::Destinations
         # assume this was a success
         @stats[:alerts_created] += 1 if action == :creating
         @stats[:alerts_updated] += 1 if action == :updating
-        @stats[:alerts_silenced] += 1 if alert_options[:silenced]
+        @stats[:alerts_silenced] += 1 if !alert_options[:silenced].empty?
       end
 
       id = resp[1].nil? ? nil : [resp[1]['id']]
@@ -166,9 +186,12 @@ module Interferon::Destinations
     def create_datadog_alert(alert, datadog_query, message, alert_options)
       @stats[:alerts_to_be_created] += 1
       new_alert_text = <<-EOM
-Query: #{datadog_query}
-Message: #{message.split().join(' ')}
-Options: #{alert_options}
+Query:
+#{datadog_query}
+Message:
+#{message}
+Options:
+#{alert_options}
 EOM
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
@@ -187,15 +210,19 @@ EOM
 
         new_alert_text = <<-EOM.strip
 Query:
-#{datadog_query}
+#{datadog_query.strip}
 Message:
-#{message}
+#{message.strip}
+Options:
+#{alert_options}
 EOM
         existing_alert_text = <<-EOM.strip
 Query:
-#{existing_alert['query']}
+#{existing_alert['query'].strip}
 Message:
-#{existing_alert['message']}
+#{existing_alert['message'].strip}
+Options:
+#{alert_options}
 EOM
         diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>1)
         log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
