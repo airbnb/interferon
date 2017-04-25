@@ -153,7 +153,7 @@ module Interferon::Destinations
       alert_opts[:options][:thresholds][:critical] = alert['thresholds']['critical'] if alert['thresholds']['critical']
 
       # Add an evaluation delay (useful for CloudWatch metrics, only applies to metric alerts)
-      alert_ops[:options][:evaluation_delay] = alert['evaluation_delay'] if alert['evaluation_delay']
+      alert_opts[:options][:evaluation_delay] = alert['evaluation_delay'] if alert['evaluation_delay']
 
       datadog_query = alert['metric']['datadog_query'].strip
       existing_alert = existing_alerts[alert['name']]

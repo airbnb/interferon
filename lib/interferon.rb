@@ -73,10 +73,10 @@ module Interferon
       abort("no such directory #{path} for reading alert files") \
         unless Dir.exists?(path)
 
-      Dir.glob(File.join(path, '*.rb')) do |alert_file|
+      Dir.glob(File.join(path, '**/*.rb')) do |alert_file|
         break if @request_shutdown
         begin
-          alert = Alert.new(alert_file)
+          alert = Alert.new(path, alert_file)
         rescue StandardError => e
           log.warn "error reading alert file #{alert_file}: #{e}"
           failed += 1
