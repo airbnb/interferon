@@ -73,6 +73,10 @@ module Interferon
       get_or_set(:@timeout, v, block, false)
     end
 
+    def evaluation_delay(v = nil, &block)
+      get_or_set(:@evaluation_delay, v, block, nil)
+    end
+
     def applies(v = nil, &block)
       get_or_set(:@applies, v, block, false)
     end
