@@ -25,21 +25,34 @@ describe Interferon::Destinations::Datadog do
       'name' => 'Test Alert',
       'message' => "Test Message",
       'metric' => { 'datadog_query' => 'avg:metric{*}' },
-      'silenced' => false,
-      'silenced_until' => Time.at(0),
+      'silenced' => {},
+      'notify' => {},
     }
   }
   let(:mock_people) { ['foo', 'bar', 'baz'] }
+  let(:mock_response) {
+    {
+      "Test Alert" => {
+        "id" => 567,
+        "name" => 'Test Alert',
+        'message' => "Test Message",
+        "query" => 'avg:metric{*}',
+        "options" => {
+          "silenced" => {}
+        }
+      }
+    }
+  }
 
   describe ".get_existing_alerts" do
-    it "calls dogapi get_all_alerts" do
-      expect_any_instance_of(Dogapi::Client).to receive(:get_all_monitors).and_return([200, ""])
+    it "calls dogapi get_all_monitors" do
+      expect_any_instance_of(Dogapi::Client).to receive(:get_all_monitors).and_return([200, []])
       datadog.get_existing_alerts
     end
   end
 
   describe ".existing_alerts" do
-    it "retries dogapi get_all_alerts" do
+    it "retries dogapi get_all_monitors" do
       return_vals = [[400, ""]] * (retries + 1)
       expect_any_instance_of(Dogapi::Client).to receive(:get_all_monitors).and_return(*return_vals)
       expect { datadog.existing_alerts }.to raise_error RuntimeError
@@ -47,63 +60,65 @@ describe Interferon::Destinations::Datadog do
   end
 
   describe ".create_alert" do
-    it "calls dogapi alert" do
-      expect_any_instance_of(Dogapi::Client).to receive(:alert).and_return([200, ""])
+    it "calls dogapi monitor" do
+      expect_any_instance_of(Dogapi::Client).to receive(:monitor).and_return([200, ""])
       expect(datadog).to receive(:existing_alerts).and_return({})
       datadog.create_alert(mock_alert, mock_people)
     end
 
-    it "calls dogapi update_alert when alert name is found" do
-      expect_any_instance_of(Dogapi::Client).to receive(:update_alert).and_return([200, ""])
-      expect(datadog).to receive(:existing_alerts).and_return(
-        {
-          "Test Alert" => {
-            "id" => 567,
-            "name" => 'Test Alert',
-          }
-        }
-      )
+    it "calls dogapi update_monitor when alert name is found" do
+      expect_any_instance_of(Dogapi::Client).to receive(:update_monitor).and_return([200, ""])
+      expect(datadog).to receive(:existing_alerts).and_return(mock_response)
       datadog.create_alert(mock_alert, mock_people)
     end
 
-    it "always calls alert in dry-run" do
-      expect_any_instance_of(Dogapi::Client).to receive(:alert).and_return([200, ""])
-      expect(datadog_dry_run).to receive(:existing_alerts).and_return(
-        {
-          "Test Alert" => {
-            "id" => 567,
-            "name" => 'Test Alert',
-          }
-        }
-      )
+    it "calls dogapi to delete and recreate when alert name is found" do
+      expect_any_instance_of(Dogapi::Client).to receive(:delete_monitor).and_return([200, ""])
+      expect_any_instance_of(Dogapi::Client).to receive(:monitor).and_return([200, ""])
+      mock_response["Test Alert"]["type"] = "event_alert"
+      expect(datadog).to receive(:existing_alerts).and_return(mock_response)
+      datadog.create_alert(mock_alert, mock_people)
+    end
+
+    it "calls dogapi to unmute when exiting alert is muted" do
+      expect_any_instance_of(Dogapi::Client).to receive(:update_monitor).and_return([200, ""])
+      expect_any_instance_of(Dogapi::Client).to receive(:unmute_monitor).and_return([200, ""])
+      mock_response["Test Alert"]["options"]["silenced"] = { '*' => nil }
+      expect(datadog).to receive(:existing_alerts).and_return(mock_response)
+      datadog.create_alert(mock_alert, mock_people)
+    end
+
+    it "always calls monitor in dry-run" do
+      expect_any_instance_of(Dogapi::Client).to receive(:monitor).and_return([200, ""])
+      expect(datadog_dry_run).to receive(:existing_alerts).and_return(mock_response)
       datadog_dry_run.create_alert(mock_alert, mock_people)
     end
   end
 
   describe ".remove_alert" do
-    it "calls dogapi delete_alert with the correct alert id" do
+    it "calls dogapi delete_monitor with the correct alert id" do
       mock_alert["message"] += Interferon::Destinations::Datadog::ALERT_KEY
-      expect_any_instance_of(Dogapi::Client).to receive(:delete_alert).
+      expect_any_instance_of(Dogapi::Client).to receive(:delete_monitor).
         with(mock_alert_id).and_return([200, ""])
       datadog.remove_alert(mock_alert)
     end
 
-    it "does not call dogapi delete_alert in dry_run" do
+    it "does not call dogapi delete_monitor in dry_run" do
       mock_alert["message"] += Interferon::Destinations::Datadog::ALERT_KEY
-      expect_any_instance_of(Dogapi::Client).to_not receive(:delete_alert)
+      expect_any_instance_of(Dogapi::Client).to_not receive(:delete_monitor)
       datadog_dry_run.remove_alert(mock_alert)
     end
 
-    it "does not call dogapi delete_alert when ALERT_KEY is missing" do
-      expect_any_instance_of(Dogapi::Client).to_not receive(:delete_alert)
+    it "does not call dogapi delete_monitor when ALERT_KEY is missing" do
+      expect_any_instance_of(Dogapi::Client).to_not receive(:delete_monitor)
       datadog.remove_alert(mock_alert)
     end
 
   end
 
   describe ".remove_alert_by_id" do
-    it "calls dogapi delete_alert" do
-      expect_any_instance_of(Dogapi::Client).to receive(:delete_alert).
+    it "calls dogapi delete_monitor" do
+      expect_any_instance_of(Dogapi::Client).to receive(:delete_monitor).
         with(mock_alert_id).and_return([200, ""])
       datadog.remove_alert_by_id(mock_alert_id)
     end

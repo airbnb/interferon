@@ -1,6 +1,8 @@
 require 'diffy'
 require 'dogapi'
+require 'parallel'
 require 'set'
+require 'thread'
 
 Diffy::Diff.default_format = :text
 
@@ -37,8 +39,11 @@ module Interferon::Destinations
       @existing_alerts = nil
       @dry_run = options['dry_run']
 
-      # create datadog alerts 10 at a time
+      # Datadog communication threads
       @concurrency = options['concurrency'] || 10
+      # Fetch page size
+      @page_size = options['page_size'] || 1000
+
       # configure retries
       @retries = options['retries'] || 3
 
@@ -66,26 +71,39 @@ module Interferon::Destinations
     end
 
     def get_existing_alerts
-      resp = @dog.get_all_monitors()
+      alerts = Queue.new
+      has_more = true
 
-      code = resp[0].to_i
-      if code != 200
-        raise "Failed to retrieve existing alerts from datadog. #{code.to_s}: #{resp[1].inspect}"
+      Parallel.map_with_index(-> { has_more || Parallel::Stop },
+                              in_threads: @concurrency) do |_, page|
+        successful = false
+        @retries.downto(0) do
+          resp = @dog.get_all_monitors(page: page, page_size: @page_size)
+          code = resp[0].to_i
+          if code != 200
+            log.info("Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}")
+          else
+            alerts_page = resp[1]
+            if alerts_page.length < @page_size
+              has_more = false
+            end
+            alerts_page.map { |alert| alerts.push(alert) }
+            successful = true
+            break
+          end
+        end
+
+        if !successful
+          # Out of retries
+          raise "Retries exceeded for fetching data from datadog."
+        end
       end
-
-      resp[1]
+      alerts.size.times.map { alerts.pop }
     end
 
     def existing_alerts
       unless @existing_alerts
-        retries = @retries
-        begin
-          alerts = get_existing_alerts
-        rescue
-          retries -= 1
-          retry if retries >= 0
-          raise
-        end
+        alerts = get_existing_alerts
 
         # key alerts by name
         @existing_alerts = {}
@@ -109,97 +127,47 @@ module Interferon::Destinations
         ]
       end
 
-      return @existing_alerts
+      @existing_alerts
     end
 
     def create_alert(alert, people)
       # create a message which includes the notifications
+      # Datadog may have a race condition where alerts created in a bad state may be triggered
+      # during the dry-run creation process. Delete people from dry-run alerts to avoid this
       message = generate_message(alert['message'], people)
 
       # create the hash of options to send to datadog
-      alert_opts = {
-        :name => alert['name'],
-        :message => message,
-        :options => {
-          :silenced => nil,
-          :notify_no_data => alert['notify_no_data'],
-          :notify_audit => alert['notify_audit'],
-          :timeout_h => nil,
-          :locked => true,
-          :thresholds => {}
-        }
+      alert_options = {
+        :notify_audit => alert['notify']['audit'],
+        :notify_no_data => alert['notify_no_data'],
+        :no_data_timeframe => alert['no_data_timeframe'],
+        :silenced => alert['silenced'],
+        :timeout_h => alert['timeout_h'],
       }
 
-      # Set alert to be silenced if there is a silenced set or silenced_until set
-      if alert['silenced'] || alert['silenced_until'] > Time.now
-        alert_opts[:options][:silenced] = {"*": nil}
+      if !alert['require_full_window'].nil?
+        alert_options[:require_full_window] = alert['require_full_window']
       end
 
-      if @dry_run
-        # Datadog may have a race condition where alerts created in a bad state may be triggered
-        # during the dry-run creation process. Delete people from dry-run alerts to avoid this
-        alert_opts[:message] = generate_message(alert['message'], [])
+      if !alert['thresholds'].nil?
+        alert_options[:thresholds] = alert['thresholds']
       end
 
-      # allow an optional timeframe for "no data" alerts to be specified
-      # (this feature is supported, even though it's not documented)
-      alert_opts[:options][:no_data_timeframe] = alert['no_data_timeframe'] if alert['no_data_timeframe']
+      if !alert['evaluation_delay'].nil?
+        alert_options[:evaluation_delay] = alert['evaluation_delay'].to_i
+      end
 
-      # timeout is in seconds, but set it to 1 hour at least
-      alert_opts[:options][:timeout_h] = [1, (alert['timeout'].to_i / 3600)].max if alert['timeout']
-
-      alert_opts[:options][:thresholds][:ok] = alert['thresholds']['ok'] if alert['thresholds']['ok']
-      alert_opts[:options][:thresholds][:warning] = alert['thresholds']['warning'] if alert['thresholds']['warning']
-      alert_opts[:options][:thresholds][:critical] = alert['thresholds']['critical'] if alert['thresholds']['critical']
-
-      # Add an evaluation delay (useful for CloudWatch metrics, only applies to metric alerts)
-      alert_opts[:options][:evaluation_delay] = alert['evaluation_delay'] if alert['evaluation_delay']
-
-      datadog_query = alert['metric']['datadog_query'].strip
+      datadog_query = alert['metric']['datadog_query']
       existing_alert = existing_alerts[alert['name']]
 
       # new alert, create it
       if existing_alert.nil?
         action = :creating
-        @stats[:alerts_to_be_created] += 1
-        new_alert_text = "Query: #{datadog_query} Message: #{message.split().join(' ')}"
-        log.info("creating new alert #{alert['name']}: #{new_alert_text}")
-
-        resp = @dog.monitor(
-          alert['metric']['datadog_type'],
-          alert['metric']['datadog_query'].strip,
-          alert_opts,
-        )
-
-      # existing alert, modify it
+        resp = create_datadog_alert(alert, datadog_query, message, alert_options)
       else
+        # existing alert, modify it
         action = :updating
-        @stats[:alerts_to_be_updated] += 1
-        id = existing_alert['id'][0]
-
-        new_alert_text = "Query:\n#{datadog_query}\nMessage:\n#{message}"
-        existing_alert_text = "Query:\n#{existing_alert['query']}\nMessage:\n#{existing_alert['message']}"
-        diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>1)
-        log.info("updating existing alert #{id} (#{alert['name']}): #{diff}")
-
-        if @dry_run
-          resp = @dog.monitor(
-            alert['metric']['datadog_type'],
-            alert['metric']['datadog_query'].strip,
-            alert_opts,
-          )
-        else
-          resp = @dog.update_monitor(
-            id,
-            alert['metric']['datadog_query'].strip,
-            alert_opts
-          )
-          # Unmute existing alerts that have been unsilenced.
-          # Datadog does not allow updates to silencing via the update_alert API call.
-          if existing_alert['silenced'] && !alert_opts[:options][:silenced]
-            @dog.unmute_monitor(id)
-          end
-        end
+        resp = update_datadog_alert(alert, datadog_query, message, alert_options, existing_alert)
       end
 
       # log whenever we've encountered errors
@@ -211,13 +179,99 @@ module Interferon::Destinations
         # assume this was a success
         @stats[:alerts_created] += 1 if action == :creating
         @stats[:alerts_updated] += 1 if action == :updating
-        @stats[:alerts_silenced] += 1 if alert_opts[:options][:silenced]
+        @stats[:alerts_silenced] += 1 if !alert_options[:silenced].empty?
       end
 
       id = resp[1].nil? ? nil : [resp[1]['id']]
       # lets key alerts by their name
-      return [alert['name'], id]
+      [alert['name'], id]
     end
+
+    def create_datadog_alert(alert, datadog_query, message, alert_options)
+      @stats[:alerts_to_be_created] += 1
+      new_alert_text = <<-EOM
+Query:
+#{datadog_query}
+Message:
+#{message}
+Options:
+#{alert_options}
+EOM
+      log.info("creating new alert #{alert['name']}: #{new_alert_text}")
+
+      @dog.monitor(
+        alert['monitor_type'],
+        datadog_query,
+        :name => alert['name'],
+        :message => @dry_run ? generate_message(alert, []) : message,
+        :options => alert_options,
+      )
+    end
+
+    def update_datadog_alert(alert, datadog_query, message, alert_options, existing_alert)
+        @stats[:alerts_to_be_updated] += 1
+        id = existing_alert['id'][0]
+
+        new_alert_text = <<-EOM.strip
+Query:
+#{datadog_query.strip}
+Message:
+#{message.strip}
+Options:
+#{alert_options}
+EOM
+        existing_alert_text = <<-EOM.strip
+Query:
+#{existing_alert['query'].strip}
+Message:
+#{existing_alert['message'].strip}
+Options:
+#{alert_options}
+EOM
+        diff = Diffy::Diff.new(existing_alert_text, new_alert_text, :context=>1)
+        log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
+
+        if @dry_run
+          resp = @dog.monitor(
+            alert['monitor_type'],
+            datadog_query,
+            :name => alert['name'],
+            :message => generate_message(alert, []),
+            :options => alert_options,
+          )
+        else
+          if alert['monitor_type'] == existing_alert['type']
+            resp = @dog.update_monitor(
+              id,
+              datadog_query,
+              :name => alert['name'],
+              :message => message,
+              :options => alert_options,
+            )
+
+            # Unmute existing alerts that have been unsilenced.
+            # Datadog does not allow updates to silencing via the update_alert API call.
+            if !existing_alert['options']['silenced'].empty? && alert_options[:silenced].empty?
+              @dog.unmute_monitor(id)
+            end
+          else
+            # Need to recreate alert with new monitor type
+            resp = @dog.delete_monitor(id)
+            code = resp[0].to_i
+            if !(code >= 300 || code == -1)
+              resp = @dog.monitor(
+                alert['monitor_type'],
+                datadog_query,
+                :name => alert['name'],
+                :message => message,
+                :options => alert_options,
+              )
+            end
+          end
+        end
+    resp
+    end
+
 
     def remove_alert(alert)
       if alert['message'].include?(ALERT_KEY)
@@ -259,7 +313,7 @@ module Interferon::Destinations
     def remove_alert_by_id(alert_id)
       # This should only be used by dry-run to clean up created dry-run alerts
       log.debug("deleting alert, id: #{alert_id}")
-      resp = @dog.delete_alert(alert_id)
+      resp = @dog.delete_monitor(alert_id)
       code = resp[0].to_i
       log_datadog_response_code(resp, code, :deleting)
     end
@@ -278,7 +332,7 @@ module Interferon::Destinations
           statsd.gauge('datadog.api.client_error', 1, :tags => ["alert:#{alert}"])
           statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
           log.error("client error while #{action} alert '#{alert['name']}';" \
-                    " query was '#{alert['metric']['datadog_query'].strip}'" \
+                    " query was '#{alert['metric']['datadog_query']}'" \
                     " response was #{resp[0]}:'#{resp[1].inspect}'")
         end
 
@@ -290,7 +344,7 @@ module Interferon::Destinations
           statsd.gauge('datadog.api.client_error', 0, :tags => ["alert:#{alert}"])
           statsd.gauge('datadog.api.success', 0, :tags => ["alert:#{alert}"])
           log.error("unknown error while #{action} alert '#{alert['name']}':" \
-                    " query was '#{alert['metric']['datadog_query'].strip}'" \
+                    " query was '#{alert['metric']['datadog_query']}'" \
                     " response was #{resp[0]}:'#{resp[1].inspect}'")
         end
       else

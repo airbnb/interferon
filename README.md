@@ -1,18 +1,11 @@
+# Instructure fork #
+We use a fork of AirBnB's Inteferon with the following modifications:
+  * changed alert key
+  * added support for evaluation_delay
+  * alerts can be read from a multi-level directory
+
 # Interferon #
 
-# Instructure fork #
-This is a fork of https://github.com/airbnb/interferon with the following changes:
-* https://github.com/airbnb/interferon/pull/3 applied
-* https://github.com/airbnb/interferon/pull/4 applied
-* added support for thresholds
-* fixed all the options being passed to the monitor api
-* flagging monitors as locked
-* runs the config file through ERB for sekrits
-
-Upload new gem versions to packagecloud in `instructure/internal`.
-
-
-# Original #
 [![Build Status](https://travis-ci.org/airbnb/interferon.svg?branch=master)](https://travis-ci.org/airbnb/interferon)
 
 This repo contains the interferon gem.

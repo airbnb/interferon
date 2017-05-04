@@ -1,6 +1,5 @@
 require 'spec_helper'
 require 'helpers/mock_alert'
-require 'helpers/dsl_helper'
 require 'interferon/destinations/datadog'
 
 include Interferon
@@ -26,22 +25,33 @@ describe Interferon::Interferon do
     end
 
     it "detects a change if alert notify_no_data is different" do
-      alert1 = create_test_alert('name1', 'testquery1', 'message1', false)
-      alert2 = mock_alert_json('name2', 'testquery2', 'message2', true)
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', { :notify_no_data => false })
+      alert2 = mock_alert_json(
+        'name2',
+        'testquery2',
+        'message2',
+        nil,
+        [1],
+        { :notify_no_data => true }
+      )
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
 
     it "detects a change if alert silenced is different" do
-      alert1 = create_test_alert('name1', 'testquery1', 'message1', false, true)
-      alert2 = mock_alert_json('name2', 'testquery2', 'message2', false, false)
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', { :silenced => true })
+      alert2 = mock_alert_json('name2', 'testquery2', 'message2', nil, [1], { :silenced => {} })
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
 
     it "does not detect a change when alert datadog query and message are the same" do
       alert1 = create_test_alert('name1', 'testquery1', 'message1')
-      alert2 = mock_alert_json('name1', 'testquery1', "message1\nRegards, [Robo Ops](https://instructure.atlassian.net/wiki/display/IOPS/Monitors).")
+      alert2 = mock_alert_json(
+        'name1',
+        'testquery1',
+        "message1\nRegards, [Robo Ops](https://instructure.atlassian.net/wiki/display/IOPS/Monitors)."
+      )
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be true
     end
@@ -62,7 +72,12 @@ describe Interferon::Interferon do
       expect(dest).not_to receive(:create_alert)
       expect(dest).not_to receive(:remove_alert_by_id)
 
-      interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2']], {})
+      interferon.update_alerts_on_destination(
+        dest,
+        ['host'],
+        [alerts['name1'], alerts['name2']],
+        {}
+      )
     end
 
     it 'runs added alerts' do
@@ -71,7 +86,12 @@ describe Interferon::Interferon do
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).to receive(:remove_alert_by_id).with('3').once
 
-      interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {})
+      interferon.update_alerts_on_destination(
+        dest,
+        ['host'],
+        [alerts['name1'], alerts['name2'], added],
+        {}
+      )
     end
 
     it 'runs updated alerts' do
@@ -89,7 +109,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -104,7 +124,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts when creating new alert' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -116,7 +136,7 @@ describe Interferon::Interferon do
 
       # Since we change id to nil we will not be attempting to delete duplicate alerts
       # during dry run
-      # expect(dest).to receive(:remove_alert).with(existing_alerts['name1'])
+      expect(dest).to_not receive(:remove_alert).with(existing_alerts['name1'])
       expect(dest).to receive(:remove_alert).with(existing_alerts['name2'])
 
       interferon.update_alerts_on_destination(dest, ['host'], [added], {})
@@ -147,7 +167,12 @@ describe Interferon::Interferon do
       expect(dest).to receive(:create_alert).once.and_call_original
       expect(dest).not_to receive(:remove_alert_by_id).with('3')
 
-      interferon.update_alerts_on_destination(dest, ['host'], [alerts['name1'], alerts['name2'], added], {})
+      interferon.update_alerts_on_destination(
+        dest,
+        ['host'],
+        [alerts['name1'], alerts['name2'], added],
+        {}
+      )
     end
 
     it 'runs updated alerts' do
@@ -167,7 +192,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -182,7 +207,7 @@ describe Interferon::Interferon do
     end
 
     it 'deletes duplicate old alerts when creating new alert' do
-      alert1 = mock_alert_json('name1', 'testquery1', '', false, false, [1, 2, 3])
+      alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = {'name1' => alert1, 'name2' => alert2}
       dest = MockDest.new(existing_alerts)
@@ -190,7 +215,13 @@ describe Interferon::Interferon do
 
       added = create_test_alert('name1', 'testquery1', '')
 
-      expect(dest).to receive(:remove_alert).with(mock_alert_json('name1', 'testquery1', '', false, false, [2, 3]))
+      expect(dest).to receive(:remove_alert).with(mock_alert_json(
+        'name1',
+        'testquery1',
+        '',
+        nil,
+        [2, 3]
+      ))
       expect(dest).to receive(:remove_alert).with(existing_alerts['name2'])
 
       interferon.update_alerts_on_destination(dest, ['host'], [added], {})
@@ -204,8 +235,6 @@ describe Interferon::Interferon do
   end
 
   class MockDest < Interferon::Destinations::Datadog
-    @existing_alerts
-
     def initialize(the_existing_alerts)
       @existing_alerts = the_existing_alerts
     end
@@ -221,29 +250,53 @@ describe Interferon::Interferon do
     end
   end
 
-  def mock_alert_json(name, datadog_query, message, notify_no_data=false, silenced=false, id=nil)
-    { 'name'=> name,
-      'query'=> datadog_query,
-      'message'=> message,
-      'notify_no_data' => notify_no_data,
-      'silenced' => silenced,
-      'id' => id.nil? ? [name[-1]] : id
+  DEFAULT_OPTIONS = {
+    'notify_audit' => true,
+    'notify_no_data' => false,
+    'silenced' => {},
+    'thresholds' => nil,
+    'no_data_timeframe' => nil,
+    'require_full_window' => nil,
+    'timeout' => nil,
+  }
+
+  def mock_alert_json(name, datadog_query, message, type="metric alert", id=nil, options={})
+    options = DEFAULT_OPTIONS.merge(options)
+
+    {
+      'name'=> name,
+      'query' => datadog_query,
+      'type' => type,
+      'message' => message,
+      'id' => id.nil? ? [name[-1]] : id,
+      'options' => options,
     }
   end
 
-  def create_test_alert(name, datadog_query, message, notify_no_data=false, silenced=false)
-    alert_dsl = MockAlertDSL.new
-    metric_dsl = MockMetricDSL.new
+  def create_test_alert(name, datadog_query, message, options={})
+    options = DEFAULT_OPTIONS.merge(options)
+
+    alert_dsl = AlertDSL.new({})
+
+    metric_dsl = MetricDSL.new({})
     metric_dsl.datadog_query(datadog_query)
-    alert_dsl.metric(metric_dsl)
+    alert_dsl.instance_variable_set(:@metric, metric_dsl)
+
+    notify_dsl = NotifyDSL.new({})
+    notify_dsl.groups(['a'])
+    alert_dsl.instance_variable_set(:@notify, notify_dsl)
+
     alert_dsl.name(name)
     alert_dsl.applies(true)
     alert_dsl.message(message)
-    alert_dsl.silenced(silenced)
-    alert_dsl.notify_no_data(notify_no_data)
-    notify_dsl = MockNotifyDSL.new
-    notify_dsl.groups(['a'])
-    alert_dsl.notify(notify_dsl)
+
+    alert_dsl.no_data_timeframe(options['no_data_timeframe'])
+    alert_dsl.notify_no_data(options['notify_no_data'])
+    alert_dsl.require_full_window(options['require_full_window'])
+    alert_dsl.thresholds(options['thresholds'])
+    alert_dsl.timeout(options['timeout'])
+    alert_dsl.silenced(options['silenced'])
+
     MockAlert.new(alert_dsl)
   end
 end
