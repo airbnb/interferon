@@ -78,7 +78,7 @@ module Interferon::Destinations
                               in_threads: @concurrency) do |_, page|
         successful = false
         @retries.downto(0) do
-          resp = @dog.get_all_monitors(page: page, page_size: @page_size)
+          resp = @dog.get_all_monitors(with_downtimes: false, page: page, page_size: @page_size)
           code = resp[0].to_i
           if code != 200
             log.info("Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}")
@@ -144,6 +144,10 @@ module Interferon::Destinations
         :silenced => alert['silenced'],
         :timeout_h => alert['timeout_h'],
       }
+
+      if !alert['evaluation_delay'].nil?
+        alert_options[:evaluation_delay] = alert['evaluation_delay']
+      end
 
       if !alert['require_full_window'].nil?
         alert_options[:require_full_window] = alert['require_full_window']
