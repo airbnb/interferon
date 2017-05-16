@@ -145,16 +145,16 @@ module Interferon::Destinations
         :timeout_h => alert['timeout_h'],
       }
 
+      if !alert['evaluation_delay'].nil?
+        alert_options[:evaluation_delay] = alert['evaluation_delay']
+      end
+
       if !alert['require_full_window'].nil?
         alert_options[:require_full_window] = alert['require_full_window']
       end
 
       if !alert['thresholds'].nil?
         alert_options[:thresholds] = alert['thresholds']
-      end
-
-      if !alert['evaluation_delay'].nil?
-        alert_options[:evaluation_delay] = alert['evaluation_delay'].to_i
       end
 
       if !alert['include_tags'].nil?

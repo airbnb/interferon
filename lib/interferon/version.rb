@@ -1,3 +1,3 @@
 module Interferon
-  VERSION = "0.1.0-insops"
+  VERSION = "0.1.2-insops"
 end

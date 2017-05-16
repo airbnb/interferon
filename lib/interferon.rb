@@ -446,6 +446,5 @@ module Interferon
 
       prev_alert == new_alert
     end
-
   end
 end
