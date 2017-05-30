@@ -1,7 +1,10 @@
+---
 language: ruby
 sudo: false
 cache: bundler
-script: bundle exec rspec
+script:
+- bundle exec rspec
+- bundle exec rubocop
 rvm:
   - 1.9.3
   - 2.1.10
