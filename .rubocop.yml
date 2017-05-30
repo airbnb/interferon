@@ -1,0 +1,4 @@
+# REVIEWERS airbnb/security airbnb/rubocop
+
+inherit_from:
+  - .rubocop_todo.yml

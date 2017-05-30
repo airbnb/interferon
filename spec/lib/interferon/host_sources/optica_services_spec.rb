@@ -3,7 +3,7 @@ require 'helpers/optica_helper'
 require 'interferon/host_sources/optica_services'
 
 describe Interferon::HostSources::OpticaServices do
-  let(:optica_services) { Interferon::HostSources::OpticaServices.new({'host'=>'127.0.0.1'}) }
+  let(:optica_services) { Interferon::HostSources::OpticaServices.new('host' => '127.0.0.1') }
 
   describe '.list_hosts' do
     before do
@@ -11,8 +11,8 @@ describe Interferon::HostSources::OpticaServices do
     end
 
     let(:list) { optica_services.list_hosts }
-    let(:service1) { list.select{|s| s[:service] == 'service1'}[0] }
-    let(:service2) { list.select{|s| s[:service] == 'service2'}[0] }
+    let(:service1) { list.select { |s| s[:service] == 'service1' }[0] }
+    let(:service2) { list.select { |s| s[:service] == 'service2' }[0] }
 
     it 'returns both of the services we know about' do
       expect(list.length).to eq(2)
@@ -27,7 +27,7 @@ describe Interferon::HostSources::OpticaServices do
           :owner_groups,
           :consumer_roles,
           :consumer_machine_count,
-          :provider_machine_count,
+          :provider_machine_count
         )
       end
     end
@@ -38,8 +38,11 @@ describe Interferon::HostSources::OpticaServices do
     end
 
     it 'knows that box1 is using both of the services' do
-      expect(list).to satisfy{|l| l.all?{
-          |s| s[:consumer_machine_count] == 1 && s[:consumer_roles] == ['role1']}}
+      expect(list).to satisfy do |l|
+        l.all? do |s|
+          s[:consumer_machine_count] == 1 && s[:consumer_roles] == ['role1']
+        end
+      end
     end
 
     it 'knows that service1 is provided by two machines' do
@@ -48,13 +51,12 @@ describe Interferon::HostSources::OpticaServices do
 
     it 'merges the ownership for all machines that provide service1' do
       all_owners = OpticaHelper.example_node_2['ownership']['people'] +
-        OpticaHelper.example_node_4['ownership']['people']
+                   OpticaHelper.example_node_4['ownership']['people']
       all_owner_groups = OpticaHelper.example_node_2['ownership']['groups'] +
-        OpticaHelper.example_node_4['ownership']['groups']
+                         OpticaHelper.example_node_4['ownership']['groups']
 
       expect(service1[:owners]).to contain_exactly(*all_owners)
       expect(service1[:owner_groups]).to contain_exactly(*all_owner_groups)
     end
   end
 end
-

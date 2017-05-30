@@ -24,27 +24,21 @@ module Interferon
     end
 
     def change_name(name)
-      unless @dsl
-        raise "This alert has not yet been evaluated"
-      end
+      raise 'This alert has not yet been evaluated' unless @dsl
 
       @dsl.name(name)
     end
 
     def silence
-      unless @dsl
-        raise "This alert has not yet been evaluated"
-      end
+      raise 'This alert has not yet been evaluated' unless @dsl
 
       @dsl.silenced(true)
     end
 
     def [](attr)
-      unless @dsl
-        raise "This alert has not yet been evaluated"
-      end
+      raise 'This alert has not yet been evaluated' unless @dsl
 
-      return @dsl.send(attr)
+      @dsl.send(attr)
     end
   end
 end

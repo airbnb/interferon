@@ -1,6 +1,5 @@
 
 module Interferon
-
   # lets create namespaces for things we'll be loading
   module Destinations; end
   module HostSources; end
@@ -40,7 +39,7 @@ module Interferon
           next
         end
 
-        if !enabled
+        unless enabled
           log.info "skipping #{@loader_for} #{type} because it's not enabled"
           next
         end
@@ -86,14 +85,14 @@ module Interferon
           klass = @module.const_get(class_name)
         rescue LoadError => e
           raise ArgumentError,\
-            "Loading Error; interferon does not define #{@loader_for} #{type}: #{e}"
+                "Loading Error; interferon does not define #{@loader_for} #{type}: #{e}"
         rescue NameError => e
           raise ArgumentError,\
-            "Name Error; class #{class_name} is not defined in #{relative_filename}: #{e}"
+                "Name Error; class #{class_name} is not defined in #{relative_filename}: #{e}"
         end
       end
 
-      return klass
+      klass
     end
   end
 
