@@ -406,6 +406,7 @@ module Interferon
         :monitor_type => normalize_monitor_type(alert_api_json['type']),
         :query => alert_api_json['query'].strip,
         :message => alert_api_json['message'].strip,
+        :evaluation_delay => alert_api_json['options']['evaluation_delay'],
         :notify_no_data => alert_api_json['options']['notify_no_data'],
         :notify_audit => alert_api_json['options']['notify_audit'],
         :no_data_timeframe => alert_api_json['options']['no_data_timeframe'],
@@ -418,6 +419,7 @@ module Interferon
         :monitor_type => normalize_monitor_type(alert['monitor_type']),
         :query => alert['metric']['datadog_query'],
         :message => dest.generate_message(alert['message'], people).strip,
+        :evaluation_delay => alert['evaluation_delay'],
         :notify_no_data => alert['notify_no_data'],
         :notify_audit => alert['notify']['audit'],
         :no_data_timeframe => alert['no_data_timeframe'],
@@ -427,12 +429,11 @@ module Interferon
       }
 
       if !alert['require_full_window'].nil?
-        pre_alert[:require_full_window] = alert_api_json['options']['require_full_window']
+        prev_alert[:require_full_window] = alert_api_json['options']['require_full_window']
         new_alert[:require_full_window] = alert['require_full_window']
       end
 
       prev_alert == new_alert
     end
-
   end
 end

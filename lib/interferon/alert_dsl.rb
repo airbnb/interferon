@@ -90,6 +90,10 @@ module Interferon
       get_or_set(:@thresholds, v, block, nil)
     end
 
+    def evaluation_delay(v = nil, &block)
+      get_or_set(:@evaluation_delay, v, block, nil)
+    end
+
     def require_full_window(v = nil, &block)
       get_or_set(:@require_full_window, v, block, nil)
     end

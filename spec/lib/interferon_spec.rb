@@ -40,7 +40,55 @@ describe Interferon::Interferon do
 
     it "detects a change if alert silenced is different" do
       alert1 = create_test_alert('name1', 'testquery1', 'message1', { :silenced => true })
-      alert2 = mock_alert_json('name2', 'testquery2', 'message2', nil, [1], { :silenced => {} })
+      alert2 = mock_alert_json(
+        'name2',
+        'testquery2',
+        'message2',
+        nil, [1],
+        { :silenced => {} }
+      )
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "detects a change if alert no_data_timeframe is different" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', { :no_data_timeframe => nil })
+      alert2 = mock_alert_json(
+        'name2',
+        'testquery2',
+        'message2',
+        nil,
+        [1],
+        { :no_data_timeframe => 60 }
+      )
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "detects a change if alert require_full_window is different" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', { :require_full_window => false })
+      alert2 = mock_alert_json(
+        'name2',
+        'testquery2',
+        'message2',
+        nil,
+        [1],
+        { :require_full_window => true  }
+      )
+
+      expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
+    end
+
+    it "detects a change if alert evaluation_delay is different" do
+      alert1 = create_test_alert('name1', 'testquery1', 'message1', { :evaluation_delay => nil })
+      alert2 = mock_alert_json(
+        'name2',
+        'testquery2',
+        'message2',
+        nil,
+        [1],
+        { :evaluation_delay => 300 }
+      )
 
       expect(Interferon::Interferon.same_alerts(dest, [alert1, []], alert2)).to be false
     end
@@ -251,6 +299,7 @@ describe Interferon::Interferon do
   end
 
   DEFAULT_OPTIONS = {
+    'evaluation_delay' => nil,
     'notify_audit' => true,
     'notify_no_data' => false,
     'silenced' => {},
@@ -292,6 +341,7 @@ describe Interferon::Interferon do
 
     alert_dsl.no_data_timeframe(options['no_data_timeframe'])
     alert_dsl.notify_no_data(options['notify_no_data'])
+    alert_dsl.evaluation_delay(options['evaluation_delay'])
     alert_dsl.require_full_window(options['require_full_window'])
     alert_dsl.thresholds(options['thresholds'])
     alert_dsl.timeout(options['timeout'])
