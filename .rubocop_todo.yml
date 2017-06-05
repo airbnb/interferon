@@ -6,472 +6,60 @@
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
 
-# Offense count: 3
-Lint/AmbiguousRegexpLiteral:
-  Exclude:
-    - 'script/pre-commit'
-
-# Offense count: 1
-# Configuration parameters: AllowSafeAssignment.
-Lint/AssignmentInCondition:
-  Exclude:
-    - 'lib/interferon.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-Lint/DeprecatedClassMethods:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-
-# Offense count: 1
-Lint/DuplicateMethods:
-  Exclude:
-    - 'lib/interferon/alert_dsl.rb'
-
-# Offense count: 1
-Lint/ParenthesesAsGroupedExpression:
-  Exclude:
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-
-# Offense count: 15
-# Cop supports --auto-correct.
-# Configuration parameters: IgnoreEmptyBlocks, AllowUnusedKeywordArguments.
-Lint/UnusedBlockArgument:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'script/pre-commit'
-
-# Offense count: 6
-# Cop supports --auto-correct.
-# Configuration parameters: AllowUnusedKeywordArguments, IgnoreEmptyMethods.
-Lint/UnusedMethodArgument:
-  Exclude:
-    - 'lib/interferon/alert_dsl.rb'
-    - 'spec/helpers/logging_helper.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 2
-Lint/UselessAssignment:
-  Exclude:
-    - 'script/pre-commit'
-
-# Offense count: 25
 Metrics/AbcSize:
-  Max: 67
+  Enabled: false
 
-# Offense count: 3
-# Configuration parameters: CountComments.
 Metrics/ClassLength:
-  Max: 323
+  Enabled: false
 
-# Offense count: 6
 Metrics/CyclomaticComplexity:
-  Max: 11
+  Enabled: false
+  Max: 6
 
-# Offense count: 115
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes.
 # URISchemes: http, https
 Metrics/LineLength:
-  Max: 119
+  Max: 100
+  AllowURI: true
 
-# Offense count: 31
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
-  Max: 58
+  Enabled: false
 
-# Offense count: 2
 # Configuration parameters: CountKeywordArgs.
 Metrics/ParameterLists:
-  Max: 6
+  Enabled: false
+  Max: 5
 
-# Offense count: 6
 Metrics/PerceivedComplexity:
-  Max: 12
+  Enabled: false
+  Max: 7
 
-# Offense count: 2
-# Cop supports --auto-correct.
-Performance/TimesMap:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 1
-Style/AccessorMethodName:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: with_first_parameter, with_fixed_indentation
-Style/AlignParameters:
-  Exclude:
-    - 'lib/interferon/loaders.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: always, conditionals
-Style/AndOr:
-  Exclude:
-    - 'lib/interferon/host_sources/optica_services.rb'
-
-# Offense count: 7
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, ProceduralMethods, FunctionalMethods, IgnoredMethods.
-# SupportedStyles: line_count_based, semantic, braces_for_chaining
-# ProceduralMethods: benchmark, bm, bmbm, create, each_with_object, measure, new, realtime, tap, with_object
-# FunctionalMethods: let, let!, subject, watch
-# IgnoredMethods: lambda, proc, it
-Style/BlockDelimiters:
-  Exclude:
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-Style/BlockEndNewline:
-  Exclude:
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-
-# Offense count: 25
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: braces, no_braces, context_dependent
-Style/BracesAroundHashParameters:
-  Exclude:
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 16
 # Configuration parameters: EnforcedStyle, SupportedStyles.
 # SupportedStyles: nested, compact
 Style/ClassAndModuleChildren:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/host_sources/test_host_source.rb'
-    - 'spec/fixtures/loaders/host_sources/test_host_source.rb'
-    - 'spec/fixtures/loaders/test_sources/order_test_source.rb'
-    - 'spec/fixtures/loaders/test_sources/test_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/order_test_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/secondary_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/test_source.rb'
-    - 'spec/helpers/loader_helper.rb'
-    - 'spec/helpers/logging_helper.rb'
+  Enabled: false
+  EnforcedStyle: nested
+  SupportedStyles:
+  - nested
+  - compact
 
-# Offense count: 9
-# Cop supports --auto-correct.
-Style/ColonMethodCall:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-
-# Offense count: 3
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, SingleLineConditionsOnly.
-# SupportedStyles: assign_to_condition, assign_inside_condition
-Style/ConditionalAssignment:
-  Exclude:
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-
-# Offense count: 20
 Style/Documentation:
-  Exclude:
-    - 'spec/**/*'
-    - 'test/**/*'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/alert.rb'
-    - 'lib/interferon/alert_dsl.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/loaders.rb'
-    - 'lib/interferon/logging.rb'
-    - 'lib/interferon/work_hours_helper.rb'
+  Enabled: false
 
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: leading, trailing
-Style/DotPosition:
-  Exclude:
-    - 'script/pre-commit'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-
-# Offense count: 1
 Style/DoubleNegation:
-  Exclude:
-    - 'lib/interferon/loaders.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/EmptyLines:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-Style/EmptyLinesAroundAccessModifier:
-  Exclude:
-    - 'lib/interferon/alert_dsl.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-
-# Offense count: 4
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: empty_lines, no_empty_lines
-Style/EmptyLinesAroundBlockBody:
-  Exclude:
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 4
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: empty_lines, no_empty_lines
-Style/EmptyLinesAroundClassBody:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'spec/fixtures/loaders2/test_sources/test_source.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/EmptyLinesAroundMethodBody:
-  Exclude:
-    - 'lib/interferon.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: empty_lines, no_empty_lines
-Style/EmptyLinesAroundModuleBody:
-  Exclude:
-    - 'lib/interferon/loaders.rb'
-    - 'lib/interferon/logging.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: AllowForAlignment, ForceEqualSignAlignment.
-Style/ExtraSpacing:
-  Exclude:
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 7
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: consistent, special_for_inner_method_call, special_for_inner_method_call_in_parentheses
-Style/FirstParameterIndentation:
-  Exclude:
-    - 'spec/lib/interferon_spec.rb'
-    - 'spec/lib/work_hours_helper_spec.rb'
+  Enabled: false
 
 # Offense count: 3
 # Configuration parameters: EnforcedStyle, SupportedStyles.
 # SupportedStyles: format, sprintf, percent
 Style/FormatString:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 1
-# Configuration parameters: MinBodyLength.
-Style/GuardClause:
-  Exclude:
-    - 'lib/interferon.rb'
-
-# Offense count: 144
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, UseHashRocketsWithSymbolValues, PreferHashRocketsForNonAlnumEndingSymbols.
-# SupportedStyles: ruby19, ruby19_no_mixed_keys, hash_rockets
-Style/HashSyntax:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/logging.rb'
-    - 'lib/interferon/work_hours_helper.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 1
-Style/IfInsideElse:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: MaxLineLength.
-Style/IfUnlessModifier:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/alert.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'script/pre-commit'
-
-# Offense count: 14
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: special_inside_parentheses, consistent, align_braces
-Style/IndentHash:
-  Exclude:
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: normal, rails
-Style/IndentationConsistency:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: Width.
-Style/IndentationWidth:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'spec/spec_helper.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/LeadingCommentSpace:
-  Exclude:
-    - 'lib/interferon.rb'
-
-# Offense count: 8
-# Cop supports --auto-correct.
-Style/MethodCallParentheses:
-  Exclude:
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-
-# Offense count: 4
-# Cop supports --auto-correct.
-Style/MultilineBlockLayout:
-  Exclude:
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: symmetrical, new_line, same_line
-Style/MultilineMethodCallBraceLayout:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-
-# Offense count: 6
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: aligned, indented, indented_relative_to_receiver
-Style/MultilineMethodCallIndentation:
-  Exclude:
-    - 'script/pre-commit'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, IndentationWidth.
-# SupportedStyles: aligned, indented
-Style/MultilineOperationIndentation:
-  Exclude:
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-
-# Offense count: 12
-# Cop supports --auto-correct.
-Style/MutableConstant:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/test_host_source.rb'
-    - 'lib/interferon/version.rb'
-    - 'lib/interferon/work_hours_helper.rb'
-    - 'spec/fixtures/loaders/host_sources/test_host_source.rb'
-    - 'spec/fixtures/loaders/test_sources/order_test_source.rb'
-    - 'spec/fixtures/loaders/test_sources/test_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/order_test_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/secondary_source.rb'
-    - 'spec/fixtures/loaders2/test_sources/test_source.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 16
-# Cop supports --auto-correct.
-Style/NegatedIf:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/loaders.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, MinBodyLength, SupportedStyles.
-# SupportedStyles: skip_modifier_ifs, always
-Style/Next:
-  Exclude:
-    - 'lib/interferon.rb'
-
-# Offense count: 4
-# Cop supports --auto-correct.
-Style/NumericLiterals:
-  MinDigits: 9
-
-# Offense count: 8
-# Cop supports --auto-correct.
-# Configuration parameters: PreferredDelimiters.
-Style/PercentLiteralDelimiters:
-  Exclude:
-    - 'bin/interferon'
-    - 'interferon.gemspec'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
+  Enabled: false
+  EnforcedStyle: format
+  SupportedStyles:
+  - format
+  - sprintf
+  - percent
 
 # Offense count: 3
 # Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
@@ -479,225 +67,17 @@ Style/PercentLiteralDelimiters:
 # NamePrefixBlacklist: is_, has_, have_
 # NameWhitelist: is_a?
 Style/PredicateName:
-  Exclude:
-    - 'spec/**/*'
-    - 'lib/interferon/alert_dsl.rb'
-    - 'lib/interferon/work_hours_helper.rb'
+  Enabled: false
+  NamePrefix:
+  - is_
+  - has_
+  - have_
+  NamePrefixBlacklist:
+  - is_
+  - has_
+  - have_
 
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/RedundantParentheses:
-  Exclude:
-    - 'lib/interferon.rb'
 
-# Offense count: 16
-# Cop supports --auto-correct.
-# Configuration parameters: AllowMultipleReturnValues.
-Style/RedundantReturn:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/alert.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/loaders.rb'
-    - 'lib/interferon/logging.rb'
-    - 'lib/interferon/work_hours_helper.rb'
-    - 'spec/helpers/logging_helper.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/RedundantSelf:
-  Exclude:
-    - 'lib/interferon/alert_dsl.rb'
-
-# Offense count: 21
-# Cop supports --auto-correct.
-Style/SpaceAfterComma:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'spec/helpers/optica_helper.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/SpaceAfterNot:
-  Exclude:
-    - 'bin/interferon'
-
-# Offense count: 7
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: space, no_space
-Style/SpaceAroundEqualsInParameterDefault:
-  Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 7
-# Cop supports --auto-correct.
-# Configuration parameters: AllowForAlignment.
-Style/SpaceAroundOperators:
-  Exclude:
-    - 'bin/interferon'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'spec/helpers/mock_alert.rb'
-    - 'spec/helpers/optica_helper.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 11
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: space, no_space
-Style/SpaceBeforeBlockBraces:
-  Exclude:
-    - 'interferon.gemspec'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-
-# Offense count: 36
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, EnforcedStyleForEmptyBraces, SpaceBeforeBlockParameters.
-# SupportedStyles: space, no_space
-Style/SpaceInsideBlockBraces:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'script/pre-commit'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-Style/SpaceInsideBrackets:
-  Exclude:
-    - 'lib/interferon/host_sources/aws_rds.rb'
-
-# Offense count: 50
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, EnforcedStyleForEmptyBraces, SupportedStyles.
-# SupportedStyles: space, no_space, compact
-Style/SpaceInsideHashLiteralBraces:
-  Exclude:
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: use_perl_names, use_english_names
-Style/SpecialGlobalVars:
-  Exclude:
-    - 'interferon.gemspec'
-    - 'script/pre-commit'
-
-# Offense count: 245
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles, ConsistentQuotesInMultiline.
-# SupportedStyles: single_quotes, double_quotes
-Style/StringLiterals:
-  Exclude:
-    - 'bin/interferon'
-    - 'interferon.gemspec'
-    - 'lib/interferon.rb'
-    - 'lib/interferon/alert.rb'
-    - 'lib/interferon/alert_dsl.rb'
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'lib/interferon/group_sources/filesystem.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/version.rb'
-    - 'spec/helpers/mock_alert.rb'
-    - 'spec/helpers/optica_helper.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
-    - 'spec/lib/work_hours_helper_spec.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: IgnoredMethods.
-# IgnoredMethods: respond_to, define_method
-Style/SymbolProc:
-  Exclude:
-    - 'lib/interferon/alert_dsl.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, SupportedStyles.
-# SupportedStyles: final_newline, final_blank_line
-Style/TrailingBlankLines:
-  Exclude:
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-    - 'spec/lib/interferon/host_sources/optica_spec.rb'
-
-# Offense count: 5
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyleForMultiline, SupportedStyles.
-# SupportedStyles: comma, consistent_comma, no_comma
-Style/TrailingCommaInArguments:
-  Exclude:
-    - 'lib/interferon/destinations/datadog.rb'
-    - 'spec/lib/interferon/host_sources/optica_services_spec.rb'
-
-# Offense count: 20
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyleForMultiline, SupportedStyles.
-# SupportedStyles: comma, consistent_comma, no_comma
 Style/TrailingCommaInLiteral:
-  EnforcedStyleForMultiline: comma
-  Exclude:
-    - 'lib/interferon/host_sources/aws_dynamo.rb'
-    - 'lib/interferon/host_sources/aws_elasticache.rb'
-    - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon.rb'
-    - 'spec/helpers/optica_helper.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: ExactNameMatch, AllowPredicates, AllowDSLWriters, IgnoreClassMethods, Whitelist.
-# Whitelist: to_ary, to_a, to_c, to_enum, to_h, to_hash, to_i, to_int, to_io, to_open, to_path, to_proc, to_r, to_regexp, to_str, to_s, to_sym
-Style/TrivialAccessors:
-  Exclude:
-    - 'spec/lib/interferon_spec.rb'
-
-# Offense count: 2
-# Cop supports --auto-correct.
-Style/UnneededPercentQ:
-  Exclude:
-    - 'interferon.gemspec'
-
-# Offense count: 11
-# Cop supports --auto-correct.
-# Configuration parameters: SupportedStyles, WordRegex.
-# SupportedStyles: percent, brackets
-Style/WordArray:
-  Exclude:
-    - 'spec/helpers/optica_helper.rb'
-    - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/group_sources/filesystem_spec.rb'
+  Enabled: true
+  EnforcedStyleForMultiline: consistent_comma

@@ -6,7 +6,7 @@ module Interferon::Logging
     end
   end
 
-  def self.configure_logger_for(clasname)
-    return Logger.new(EmptyLogger.new)
+  def self.configure_logger_for(_clasname)
+    Logger.new(EmptyLogger.new)
   end
 end

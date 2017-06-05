@@ -6,15 +6,16 @@ module Interferon
       @hostinfo = hostinfo
     end
 
-    def method_missing(meth, *args, &block)
+    def method_missing(meth, *_args)
       raise ArgumentError, "No such alerts field '#{meth}'"
     end
 
     def [](arg)
-      self.send(arg)
+      send(arg)
     end
 
     private
+
     def get_or_set(field, val, block, default)
       if val.nil? && block.nil?
         f = instance_variable_get(field)
@@ -33,7 +34,7 @@ module Interferon
     include DSLMixin
 
     def name(v = nil, &block)
-      get_or_set(:@name, v, block, '') { |val| val.strip }
+      get_or_set(:@name, v, block, '', &:strip)
     end
 
     def message(v = nil, &block)
@@ -53,7 +54,7 @@ module Interferon
         if val.is_a? Hash
           val
         elsif val == true
-          { "*" => nil }
+          { '*' => nil }
         else
           {}
         end
@@ -98,11 +99,11 @@ module Interferon
       get_or_set(:@require_full_window, v, block, nil)
     end
 
-    def notify(v = nil)
+    def notify(_v = nil)
       @notify ||= NotifyDSL.new(@hostinfo)
     end
 
-    def metric(v = nil)
+    def metric(_v = nil)
       @metric ||= MetricDSL.new(@hostinfo)
     end
   end
@@ -127,7 +128,7 @@ module Interferon
     include DSLMixin
 
     def datadog_query(v = nil, &block)
-      get_or_set(:@datadog_query, v, block, '') { |val| val.strip }
+      get_or_set(:@datadog_query, v, block, '', &:strip)
     end
   end
 end
