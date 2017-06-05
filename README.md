@@ -5,7 +5,7 @@
 This repo contains the interferon gem.
 This gem enables you to store your alerts configuration in code.
 You should create your own repository, with a `Gemfile` which imports the interferon gem.
-For an example of such a repository, along with example configuration and alerts files, see https://www.github.com/airbnb/alerts_example
+For an example of such a repository, along with example configuration and alerts files, see https://www.github.com/airbnb/alerts
 
 ## Running This Gem ##
 
@@ -30,7 +30,7 @@ It accepts the following parameters:
 * `host_sources` -- a list of sources which can read inventory systems and return lists of hosts to monitor
 * `destinations` -- a list of alerting providers, which can monitor metrics and dispatch alerts as specified in your alerts dsl files
 
-For more information, see [config.example.yaml](blob/master/config.example.yaml) file in this repo.
+For more information, see [config.example.yaml](config.example.yaml) file in this repo.
 
 ## The Moving Parts ##
 
@@ -74,7 +74,7 @@ Here's a chart explaining the datadog metric syntax ([generated via asciiflow](h
   |      | |-----------------------------------|            +------------------------------------+
   |      | | * max, min, avg, sum              |            |trigger a separate alert for each   |
   |      + +-----------------------------------+            |different value of these tags the   |
-  | +----+----------------------------------------------+   |entire `by {}` clause can be ommited|
+  | +----+----------------------------------------------+   |entire `by {}` clause can be omitted|
   | | the interval to look at; always starts with last_ |   +------------------------------------+
   | |---------------------------------------------------|
   | | * 5m, 10m, 15m, 30m                               |

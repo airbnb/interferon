@@ -23,7 +23,7 @@ module Interferon
 
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
-    # destinations is a similiar hash from type => options for each alerter
+    # destinations is a similar hash from type => options for each alerter
     def initialize(alerts_repo_path, groups_sources, host_sources, destinations,
                    dry_run=false, processes=nil)
       @alerts_repo_path = alerts_repo_path
@@ -391,26 +391,47 @@ module Interferon
       end
     end
 
+    def self.normalize_monitor_type(monitor_type)
+      # Convert 'query alert' type to 'metric alert' type. They can used interchangeably when
+      # submitting monitors to Datadog. Datadog will automatically do the conversion to 'query
+      # alert' for a "complex" query that includes multiple metrics/tags while using 'metric alert'
+      # for monitors that include a single scope/metric.
+      monitor_type == 'query alert' ? 'metric alert' : monitor_type
+    end
+
     def self.same_alerts(dest, alert_people_pair, alert_api_json)
       alert, people = alert_people_pair
 
       prev_alert = {
+        :monitor_type => normalize_monitor_type(alert_api_json['type']),
         :query => alert_api_json['query'].strip,
         :message => alert_api_json['message'].strip,
-        :notify_no_data => alert_api_json['notify_no_data'],
-        :silenced => alert_api_json['silenced'],
-        :timeout => alert_api_json['timeout_h'],
-        :no_data_timeframe => alert_api_json['no_data_timeframe']
+        :evaluation_delay => alert_api_json['options']['evaluation_delay'],
+        :notify_no_data => alert_api_json['options']['notify_no_data'],
+        :notify_audit => alert_api_json['options']['notify_audit'],
+        :no_data_timeframe => alert_api_json['options']['no_data_timeframe'],
+        :silenced => alert_api_json['options']['silenced'],
+        :thresholds => alert_api_json['options']['thresholds'],
+        :timeout_h => alert_api_json['options']['timeout_h'],
       }
 
       new_alert = {
-        :query => alert['metric']['datadog_query'].strip,
+        :monitor_type => normalize_monitor_type(alert['monitor_type']),
+        :query => alert['metric']['datadog_query'],
         :message => dest.generate_message(alert['message'], people).strip,
+        :evaluation_delay => alert['evaluation_delay'],
         :notify_no_data => alert['notify_no_data'],
-        :silenced => alert['silenced'] || alert['silenced_until'] > Time.now,
-        :timeout => alert['timeout'] ? [1, alert['timeout'].to_i / 3600].max : nil,
-        :no_data_timeframe => alert['no_data_timeframe'] || nil
+        :notify_audit => alert['notify']['audit'],
+        :no_data_timeframe => alert['no_data_timeframe'],
+        :silenced => alert['silenced'],
+        :thresholds => alert['thresholds'],
+        :timeout_h => alert['timeout_h']
       }
+
+      if !alert['require_full_window'].nil?
+        prev_alert[:require_full_window] = alert_api_json['options']['require_full_window']
+        new_alert[:require_full_window] = alert['require_full_window']
+      end
 
       prev_alert == new_alert
     end
