@@ -669,19 +669,14 @@ Style/TrailingCommaInArguments:
 # Configuration parameters: EnforcedStyleForMultiline, SupportedStyles.
 # SupportedStyles: comma, consistent_comma, no_comma
 Style/TrailingCommaInLiteral:
+  EnforcedStyleForMultiline: comma
   Exclude:
-    - 'lib/interferon.rb'
-    - 'lib/interferon/destinations/datadog.rb'
     - 'lib/interferon/host_sources/aws_dynamo.rb'
     - 'lib/interferon/host_sources/aws_elasticache.rb'
     - 'lib/interferon/host_sources/aws_rds.rb'
-    - 'lib/interferon/host_sources/optica.rb'
-    - 'lib/interferon/host_sources/optica_services.rb'
-    - 'lib/interferon/work_hours_helper.rb'
+    - 'lib/interferon.rb'
     - 'spec/helpers/optica_helper.rb'
     - 'spec/lib/interferon/destinations/datadog_spec.rb'
-    - 'spec/lib/interferon/loaders_spec.rb'
-    - 'spec/lib/interferon_spec.rb'
 
 # Offense count: 1
 # Cop supports --auto-correct.
