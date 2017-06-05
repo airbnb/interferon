@@ -11,22 +11,20 @@ reasons = []
 diff = `git diff-index --name-status --cached HEAD`
 files = diff.split("\n").map(&:split)
 
-added_files = files.
-  select { |(status, name)| status == 'A' }.
-  map { |(status, name)| name }.
-  compact
+added_files = files
+              .select { |(status, _name)| status == 'A' }
+              .map { |(_status, name)| name }
+              .compact
 
-modified_files = files.
-  select {|(status, name)| status != 'D'}. # ignore deleted files
-  map {|(status, name)| name}.
-  compact
+modified_files = files
+                 .select { |(status, _name)| status != 'D' } # ignore deleted files
+                 .map { |(_status, name)| name }
+                 .compact
 
 # check for large files
 added_files.each do |file|
   size_in_kb = `du -k #{file}`.strip.split.first.to_i
-  if size_in_kb > 1024
-    reasons << "#{file} is greater than 1 MB in size"
-  end
+  reasons << "#{file} is greater than 1 MB in size" if size_in_kb > 1024
 end
 
 # Make sure Gemfile.lock was updated if Gemfile changed.
@@ -35,25 +33,22 @@ if modified_files.include?('Gemfile') && !modified_files.include?('Gemfile.lock'
 end
 
 # Check Ruby syntax
-modified_files.select {|f| f.match /\.((rb)|(rake))$/}.each do |file|
-  result = `ruby -c #{file} 2>&1`
-
-  if $? != 0
-    reasons << "ruby file #{file} failed syntax check"
-  end
+modified_files.select { |f| f.match(/\.((rb)|(rake))$/) }.each do |file|
+  `ruby -c #{file} 2>&1`
+  reasons << "ruby file #{file} failed syntax check" if $CHILD_STATUS != 0
 end
 
 # Check JSON syntax
-modified_files.select {|f| f.match /(\.json)$/}.each do |file|
+modified_files.select { |f| f.match(/(\.json)$/) }.each do |file|
   begin
     JSON.parse(File.read(file))
   rescue StandardError => e
-    reasons << "JSON file #{file} contains invalid JSON"
+    reasons << "JSON file #{file} contains invalid JSON: #{e}"
   end
 end
 
 # Check YAML syntax
-modified_files.select {|f| f.match /(\.yaml)$/}.each do |file|
+modified_files.select { |f| f.match(/(\.yaml)$/) }.each do |file|
   begin
     YAML.parse(File.read(file))
   rescue YAML::SyntaxError => e

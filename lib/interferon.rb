@@ -6,7 +6,7 @@ require 'interferon/loaders'
 require 'interferon/alert'
 require 'interferon/alert_dsl'
 
-#require 'pry'  #uncomment if you're debugging
+# require 'pry'  #uncomment if you're debugging
 require 'erb'
 require 'ostruct'
 require 'parallel'
@@ -15,17 +15,16 @@ require 'yaml'
 
 module Interferon
   class Interferon
-
     include Logging
     attr_accessor :host_sources, :destinations, :host_info
 
-    DRY_RUN_ALERTS_NAME_PREFIX = '[-dry-run-]'
+    DRY_RUN_ALERTS_NAME_PREFIX = '[-dry-run-]'.freeze
 
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similar hash from type => options for each alerter
     def initialize(alerts_repo_path, groups_sources, host_sources, destinations,
-                   dry_run=false, processes=nil)
+                   dry_run = false, processes = nil)
       @alerts_repo_path = alerts_repo_path
       @groups_sources = groups_sources
       @host_sources = host_sources
@@ -36,8 +35,8 @@ module Interferon
     end
 
     def run(dry_run = false)
-      Signal.trap("TERM") do
-        log.info "SIGTERM received. shutting down gracefully..."
+      Signal.trap('TERM') do
+        log.info 'SIGTERM received. shutting down gracefully...'
         @request_shutdown = true
       end
       @dry_run = dry_run
@@ -50,9 +49,7 @@ module Interferon
 
       @destinations.each do |dest|
         dest['options'] ||= {}
-        if @dry_run
-          dest['options']['dry_run'] = true
-        end
+        dest['options']['dry_run'] = true if @dry_run
       end
 
       update_alerts(@destinations, hosts, alerts, groups)
@@ -71,7 +68,7 @@ module Interferon
       # validate that alerts path exists
       path = File.expand_path(File.join(@alerts_repo_path, 'alerts'))
       abort("no such directory #{path} for reading alert files") \
-        unless Dir.exists?(path)
+        unless Dir.exist?(path)
 
       Dir.glob(File.join(path, '*.rb')) do |alert_file|
         break if @request_shutdown
@@ -91,7 +88,7 @@ module Interferon
       statsd.gauge('alerts.read.failed', failed)
 
       abort("failed to read #{failed} alerts") if failed > 0
-      return alerts
+      alerts
     end
 
     def read_groups(sources)
@@ -109,16 +106,18 @@ module Interferon
           people_count += people.count
         end
 
-        log.info "read #{people_count} people in #{source_groups.count} groups from source #{source.class.name}"
+        log.info "read #{people_count} people in #{source_groups.count} groups" \
+                 "from source #{source.class.name}"
       end
 
-      log.info "total of #{groups.values.flatten.count} people in #{groups.count} groups from #{sources.count} sources"
+      log.info "total of #{groups.values.flatten.count} people in #{groups.count} groups" \
+               "from #{sources.count} sources"
 
       statsd.gauge('groups.sources', sources.count)
       statsd.gauge('groups.count', groups.count)
       statsd.gauge('groups.people', groups.values.flatten.count)
 
-      return groups
+      groups
     end
 
     def read_hosts(sources)
@@ -131,14 +130,14 @@ module Interferon
         source_hosts = source.list_hosts
         hosts << source_hosts
 
-        statsd.gauge('hosts.count', source_hosts.count, :tags => ["source:#{source.class.name}"])
+        statsd.gauge('hosts.count', source_hosts.count, tags: ["source:#{source.class.name}"])
         log.info "read #{source_hosts.count} hosts from source #{source.class.name}"
       end
 
       hosts.flatten!
       log.info "total of #{hosts.count} entities from #{sources.count} sources"
 
-      return hosts
+      hosts
     end
 
     def update_alerts(destinations, hosts, alerts, groups)
@@ -169,16 +168,15 @@ module Interferon
         statsd.histogram(
           @dry_run ? 'destinations.run_time.dry_run' : 'destinations.run_time',
           run_time,
-          :tags => ["destination:#{dest.class.name}"])
-        log.info "#{dest.class.name} : run completed in %.2f seconds" % (run_time)
+          tags: ["destination:#{dest.class.name}"]
+        )
+        log.info "#{dest.class.name} : run completed in %.2f seconds" % run_time
 
         # report destination stats
         dest.report_stats
       end
 
-      if @dry_run && !dest.api_errors.empty?
-        raise dest.api_errors.to_s
-      end
+      raise dest.api_errors.to_s if @dry_run && !dest.api_errors.empty?
     end
 
     def do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
@@ -192,8 +190,8 @@ module Interferon
       end
 
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |name, alert_people_pair|
-        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
+        !Interferon.need_update(dest, alert_people_pair, existing_alerts)
       end
 
       # Add dry-run prefix to alerts and delete id to avoid impacting real alerts
@@ -206,7 +204,7 @@ module Interferon
       end
 
       # Build new queue with dry-run prefixes and ensure they are silenced
-      alerts_queue.each do |name, alert_people_pair|
+      alerts_queue.each do |_name, alert_people_pair|
         alert = alert_people_pair[0]
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
         alert.change_name(dry_run_alert_name)
@@ -216,23 +214,23 @@ module Interferon
       # Create alerts in destination
       created_alerts = create_alerts(dest, updates_queue)
 
-      # Existing alerts are pruned until all that remains are alerts that aren't being generated anymore
+      # Existing alerts are pruned until all that remains are
+      # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |name, alert_people_pair|
+      alerts_queue.each do |_name, alert_people_pair|
         alert = alert_people_pair[0]
         old_alerts = to_remove[alert['name']]
 
-        if !old_alerts.nil?
-          if old_alerts['id'].length == 1
-            to_remove.delete(alert['name'])
-          else
-            old_alerts['id'] = old_alerts['id'].drop(1)
-          end
+        next if old_alerts.nil?
+        if old_alerts['id'].length == 1
+          to_remove.delete(alert['name'])
+        else
+          old_alerts['id'] = old_alerts['id'].drop(1)
         end
       end
 
       # Clean up alerts not longer being generated
-      to_remove.each do |name, alert|
+      to_remove.each do |_name, alert|
         break if @request_shutdown
         dest.remove_alert(alert)
       end
@@ -244,35 +242,34 @@ module Interferon
           dest.remove_alert_by_id(alert_id)
         end
       end
-
     end
 
     def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |name, alert_people_pair|
-        !Interferon::need_update(dest, alert_people_pair, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
+        !Interferon.need_update(dest, alert_people_pair, existing_alerts)
       end
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
 
-      # Existing alerts are pruned until all that remains are alerts that aren't being generated anymore
+      # Existing alerts are pruned until all that remains are
+      # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |name, alert_people_pair|
+      alerts_queue.each do |_name, alert_people_pair|
         alert = alert_people_pair[0]
         old_alerts = to_remove[alert['name']]
 
-        if !old_alerts.nil?
-          if old_alerts['id'].length == 1
-            to_remove.delete(alert['name'])
-          else
-            old_alerts['id'] = old_alerts['id'].drop(1)
-          end
+        next if old_alerts.nil?
+        if old_alerts['id'].length == 1
+          to_remove.delete(alert['name'])
+        else
+          old_alerts['id'] = old_alerts['id'].drop(1)
         end
       end
 
       # Clean up alerts not longer being generated
-      to_remove.each do |name, alert|
+      to_remove.each do |_name, alert|
         break if @request_shutdown
         dest.remove_alert(alert)
       end
@@ -283,10 +280,10 @@ module Interferon
       alerts_to_create = alerts_queue.keys
       concurrency = dest.concurrency || 10
       unless @request_shutdown
-        threads = concurrency.times.map do |i|
+        threads = Array.new(concurrency) do |i|
           log.info "thread #{i} created"
           t = Thread.new do
-            while name = alerts_to_create.shift
+            while (name = alerts_to_create.shift)
               break if @request_shutdown
               cur_alert, people = alerts_queue[name]
               log.debug "creating alert for #{cur_alert[:name]}"
@@ -308,10 +305,10 @@ module Interferon
         break if @request_shutdown
         alerts_generated = {}
         counters = {
-          :errors => 0,
-          :evals => 0,
-          :applies => 0,
-          :hosts => hosts.length
+          errors: 0,
+          evals: 0,
+          applies: 0,
+          hosts: hosts.length,
         }
         last_eval_error = nil
 
@@ -347,8 +344,8 @@ module Interferon
         end
 
         # log some of the counters
-        statsd.gauge('alerts.evaluate.errors', counters[:errors], :tags => ["alert:#{alert}"])
-        statsd.gauge('alerts.evaluate.applies', counters[:applies], :tags => ["alert:#{alert}"])
+        statsd.gauge('alerts.evaluate.errors', counters[:errors], tags: ["alert:#{alert}"])
+        statsd.gauge('alerts.evaluate.applies', counters[:applies], tags: ["alert:#{alert}"])
 
         if counters[:applies] > 0
           log.info "alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts"
@@ -359,18 +356,19 @@ module Interferon
           log.error "alert #{alert} failed to evaluate in the context of all hosts!"
           log.error "last error on alert #{alert}: #{last_eval_error}"
 
-          statsd.gauge('alerts.evaluate.failed_on_all', 1, :tags => ["alert:#{alert}"])
-          log.debug "alert #{alert}: error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
+          statsd.gauge('alerts.evaluate.failed_on_all', 1, tags: ["alert:#{alert}"])
+          log.debug "alert #{alert}: " \
+                    "error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
         else
-          statsd.gauge('alerts.evaluate.failed_on_all', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('alerts.evaluate.failed_on_all', 0, tags: ["alert:#{alert}"])
         end
 
         # did the alert apply to any hosts?
         if counters[:applies] == 0
-          statsd.gauge('alerts.evaluate.never_applies', 1, :tags => ["alert:#{alert}"])
+          statsd.gauge('alerts.evaluate.never_applies', 1, tags: ["alert:#{alert}"])
           log.warn "alert #{alert} did not apply to any hosts"
         else
-          statsd.gauge('alerts.evaluate.never_applies', 0, :tags => ["alert:#{alert}"])
+          statsd.gauge('alerts.evaluate.never_applies', 0, tags: ["alert:#{alert}"])
         end
         alerts_generated
       end
@@ -403,38 +401,37 @@ module Interferon
       alert, people = alert_people_pair
 
       prev_alert = {
-        :monitor_type => normalize_monitor_type(alert_api_json['type']),
-        :query => alert_api_json['query'].strip,
-        :message => alert_api_json['message'].strip,
-        :evaluation_delay => alert_api_json['options']['evaluation_delay'],
-        :notify_no_data => alert_api_json['options']['notify_no_data'],
-        :notify_audit => alert_api_json['options']['notify_audit'],
-        :no_data_timeframe => alert_api_json['options']['no_data_timeframe'],
-        :silenced => alert_api_json['options']['silenced'],
-        :thresholds => alert_api_json['options']['thresholds'],
-        :timeout_h => alert_api_json['options']['timeout_h'],
+        monitor_type: normalize_monitor_type(alert_api_json['type']),
+        query: alert_api_json['query'].strip,
+        message: alert_api_json['message'].strip,
+        evaluation_delay: alert_api_json['options']['evaluation_delay'],
+        notify_no_data: alert_api_json['options']['notify_no_data'],
+        notify_audit: alert_api_json['options']['notify_audit'],
+        no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
+        silenced: alert_api_json['options']['silenced'],
+        thresholds: alert_api_json['options']['thresholds'],
+        timeout_h: alert_api_json['options']['timeout_h'],
       }
 
       new_alert = {
-        :monitor_type => normalize_monitor_type(alert['monitor_type']),
-        :query => alert['metric']['datadog_query'],
-        :message => dest.generate_message(alert['message'], people).strip,
-        :evaluation_delay => alert['evaluation_delay'],
-        :notify_no_data => alert['notify_no_data'],
-        :notify_audit => alert['notify']['audit'],
-        :no_data_timeframe => alert['no_data_timeframe'],
-        :silenced => alert['silenced'],
-        :thresholds => alert['thresholds'],
-        :timeout_h => alert['timeout_h']
+        monitor_type: normalize_monitor_type(alert['monitor_type']),
+        query: alert['metric']['datadog_query'],
+        message: dest.generate_message(alert['message'], people).strip,
+        evaluation_delay: alert['evaluation_delay'],
+        notify_no_data: alert['notify_no_data'],
+        notify_audit: alert['notify']['audit'],
+        no_data_timeframe: alert['no_data_timeframe'],
+        silenced: alert['silenced'],
+        thresholds: alert['thresholds'],
+        timeout_h: alert['timeout_h'],
       }
 
-      if !alert['require_full_window'].nil?
+      unless alert['require_full_window'].nil?
         prev_alert[:require_full_window] = alert_api_json['options']['require_full_window']
         new_alert[:require_full_window] = alert['require_full_window']
       end
 
       prev_alert == new_alert
     end
-
   end
 end

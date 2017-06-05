@@ -1,5 +1,5 @@
-require "spec_helper"
-require "helpers/loader_helper"
+require 'spec_helper'
+require 'helpers/loader_helper'
 
 describe 'DynamicLoader' do
   describe 'custom class retrieval' do
@@ -10,7 +10,7 @@ describe 'DynamicLoader' do
 
     it 'throws an ArgumentError when the type cannot be found' do
       test_loader = TestLoader.new(['./spec/fixtures/loaders'])
-      expect{test_loader.get_klass('unknown_source')}.to raise_error(ArgumentError)
+      expect { test_loader.get_klass('unknown_source') }.to raise_error(ArgumentError)
     end
 
     it 'looks at custom paths in order' do
@@ -53,22 +53,25 @@ describe 'DynamicLoader' do
     it 'returns an instance for each enabled source' do
       instances = loader.get_all(
         [
-          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
-          {'type' => 'secondary_source', 'enabled' => true, 'options' => {}},
-        ])
+          { 'type' => 'test_source', 'enabled' => true, 'options' => {} },
+          { 'type' => 'secondary_source', 'enabled' => true, 'options' => {} },
+        ]
+      )
 
       expect(instances.count).to eq(2)
       expect(instances).to contain_exactly(
         an_instance_of(Interferon::TestSources::TestSource),
-        an_instance_of(Interferon::TestSources::SecondarySource))
+        an_instance_of(Interferon::TestSources::SecondarySource)
+      )
     end
 
     it 'ignores non-enabled sources' do
       instances = loader.get_all(
         [
-          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
-          {'type' => 'secondary_source', 'enabled' => false, 'options' => {}},
-        ])
+          { 'type' => 'test_source', 'enabled' => true, 'options' => {} },
+          { 'type' => 'secondary_source', 'enabled' => false, 'options' => {} },
+        ]
+      )
 
       expect(instances.count).to eq(1)
       expect(instances).to contain_exactly(an_instance_of(Interferon::TestSources::TestSource))
@@ -77,9 +80,10 @@ describe 'DynamicLoader' do
     it 'ignores sources with no type set' do
       instances = loader.get_all(
         [
-          {'type' => 'test_source', 'enabled' => true, 'options' => {}},
-          {'enabled' => true, 'options' => {}},
-        ])
+          { 'type' => 'test_source', 'enabled' => true, 'options' => {} },
+          { 'enabled' => true, 'options' => {} },
+        ]
+      )
 
       expect(instances.count).to eq(1)
       expect(instances).to contain_exactly(an_instance_of(Interferon::TestSources::TestSource))
@@ -87,10 +91,10 @@ describe 'DynamicLoader' do
 
     it 'properly sets options on classes it instantiates' do
       instances = loader.get_all(
-        [{'type' => 'test_source', 'enabled' => true, 'options' => {'testval' => 5}}])
+        [{ 'type' => 'test_source', 'enabled' => true, 'options' => { 'testval' => 5 } }]
+      )
 
       expect(instances[0].testval).to eq(5)
     end
   end
-
 end

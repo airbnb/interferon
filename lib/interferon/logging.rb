@@ -3,12 +3,11 @@ require 'statsd'
 
 module Interferon
   module Logging
-
     def statsd
       @statsd ||= Statsd.new(
         Statsd::DEFAULT_HOST,
         Statsd::DEFAULT_PORT,
-        :namespace => 'alerts_framework'
+        namespace: 'alerts_framework'
       )
     end
 
@@ -20,7 +19,7 @@ module Interferon
       logger = Logger.new(STDERR)
       logger.level = Logger::INFO unless ENV['DEBUG']
       logger.progname = classname
-      return logger
+      logger
     end
   end
 end

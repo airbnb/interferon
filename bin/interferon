@@ -4,13 +4,13 @@ require 'yaml'
 require 'optparse'
 require 'interferon'
 
-options={}
+options = {}
 
 # set command line options
 optparse = OptionParser.new do |opts|
-  opts.banner = %{Usage: interferon --config /path/to/interferon/config}
+  opts.banner = %(Usage: interferon --config /path/to/interferon/config)
 
-  opts.on('-c config','--config config', String, 'Path to interferon config') do |key,value|
+  opts.on('-c config', '--config config', String, 'Path to interferon config') do |key, _value|
     options[:config] = key
   end
 
@@ -26,7 +26,7 @@ end
 
 def parseconfig(filename)
   begin
-    c = YAML::parse(File.read(filename))
+    c = YAML.parse(File.read(filename))
   rescue Errno::ENOENT => e
     raise ArgumentError, "config file does not exist:\n#{e.inspect}"
   rescue Errno::EACCES => e
@@ -34,7 +34,7 @@ def parseconfig(filename)
   rescue YAML::SyntaxError => e
     raise "config file #{filename} contains invalid YAML:\n#{e.inspect}"
   end
-  return c.to_ruby
+  c.to_ruby
 end
 
 # parse command line arguments
@@ -46,8 +46,8 @@ end
 
 # validate that required options are present
 config = parseconfig(options[:config])
-%w{alerts_repo_path host_sources destinations}.each do |req|
-  unless config.include?(req) && ! config[req].empty?
+%w(alerts_repo_path host_sources destinations).each do |req|
+  unless config.include?(req) && !config[req].empty?
     puts "config file has no #{req} defined; exiting"
     exit 2
   end
@@ -59,8 +59,9 @@ a = Interferon::Interferon.new(
   config['alerts_repo_path'],
   config['group_sources'] || {},
   config['host_sources'],
-  config['destinations'])
+  config['destinations']
+)
 
 a.run(options[:dry_run])
 
-puts "interferon signaling complete!"
+puts 'interferon signaling complete!'
