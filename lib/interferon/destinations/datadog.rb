@@ -157,6 +157,10 @@ module Interferon::Destinations
         alert_options[:evaluation_delay] = alert['evaluation_delay'].to_i
       end
 
+      if !alert['include_tags'].nil?
+        alert_options[:include_tags] = alert['include_tags']
+      end
+
       datadog_query = alert['metric']['datadog_query']
       existing_alert = existing_alerts[alert['name']]
 

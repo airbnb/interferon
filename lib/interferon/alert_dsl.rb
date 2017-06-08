@@ -86,6 +86,10 @@ module Interferon
       timeout ? [1, timeout.to_i / 3600].max : nil
     end
 
+    def include_tags
+      get_or_set(:@include_tags, v, block, nil)
+    end
+
     def thresholds(v = nil, &block)
       get_or_set(:@thresholds, v, block, nil)
     end
