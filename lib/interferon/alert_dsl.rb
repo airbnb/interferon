@@ -86,7 +86,7 @@ module Interferon
       timeout ? [1, timeout.to_i / 3600].max : nil
     end
 
-    def include_tags
+    def include_tags(v = nil, &block)
       get_or_set(:@include_tags, v, block, nil)
     end
 
