@@ -3,7 +3,7 @@ require 'helpers/optica_helper'
 require 'interferon/host_sources/optica'
 
 describe Interferon::HostSources::Optica do
-  let(:optica) { Interferon::HostSources::Optica.new({'host'=>'127.0.0.1'}) }
+  let(:optica) { Interferon::HostSources::Optica.new('host' => '127.0.0.1') }
 
   describe '.list_hosts' do
     before do
@@ -23,8 +23,11 @@ describe Interferon::HostSources::Optica do
     end
 
     it 'does not barf if ownership info is missing' do
-      expect(list).to satisfy{|l| l.one?{|h| h[:owners].empty? && h[:owner_groups].empty?}}
+      expect(list).to satisfy do |l|
+        l.one? do |h|
+          h[:owners].empty? && h[:owner_groups].empty?
+        end
+      end
     end
   end
 end
-

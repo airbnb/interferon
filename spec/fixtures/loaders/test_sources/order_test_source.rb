@@ -1,5 +1,5 @@
 module Interferon::TestSources
   class OrderTestSource
-    DIR = 'loaders'
+    DIR = 'loaders'.freeze
   end
 end

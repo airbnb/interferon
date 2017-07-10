@@ -6,7 +6,7 @@ module Interferon::HostSources
     include ::Interferon::Logging
 
     def initialize(options)
-      raise ArgumentError, "missing host for optica source" \
+      raise ArgumentError, 'missing host for optica source' \
         unless options['host']
 
       @host = options['host']
@@ -14,15 +14,17 @@ module Interferon::HostSources
     end
 
     def list_hosts
-      return optica_data['nodes'].map{|ip, host| {
-          :source => 'optica',
-          :hostname => host['hostname'],
-          :role => host['role'],
-          :environment => host['environment'],
+      optica_data['nodes'].map do |_ip, host|
+        {
+          source: 'optica',
+          hostname: host['hostname'],
+          role: host['role'],
+          environment: host['environment'],
 
-          :owners => host['ownership'] && host['ownership']['people'] || [],
-          :owner_groups => host['ownership'] && host['ownership']['groups'] || [],
-        }}
+          owners: host['ownership'] && host['ownership']['people'] || [],
+          owner_groups: host['ownership'] && host['ownership']['groups'] || [],
+        }
+      end
     end
 
     def optica_data
@@ -32,7 +34,7 @@ module Interferon::HostSources
         con.open_timeout = 60
 
         response = con.get('/')
-        JSON::parse(response.body)
+        JSON.parse(response.body)
       end
     end
   end
