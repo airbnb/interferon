@@ -96,7 +96,7 @@ module Interferon
       loader = GroupSourcesLoader.new([@alerts_repo_path])
       loader.get_all(sources).each do |source|
         break if @request_shutdown
-        source_groups = source.list_groups
+        source_groups = source.list_groups { groups }
 
         # add all people to groups
         people_count = 0
