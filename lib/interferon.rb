@@ -190,8 +190,8 @@ module Interferon
       end
 
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
-        !Interferon.need_update(dest, alert_people_pair, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert, people|
+        !dest.need_update(alert, people, existing_alerts)
       end
 
       # Add dry-run prefix to alerts and delete id to avoid impacting real alerts
@@ -204,8 +204,7 @@ module Interferon
       end
 
       # Build new queue with dry-run prefixes and ensure they are silenced
-      alerts_queue.each do |_name, alert_people_pair|
-        alert = alert_people_pair[0]
+      alerts_queue.each do |_name, alert, people|
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
         alert.change_name(dry_run_alert_name)
         alert.silence
@@ -217,8 +216,7 @@ module Interferon
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert_people_pair|
-        alert = alert_people_pair[0]
+      alerts_queue.each do |_name, alert, people|
         old_alerts = to_remove[alert['name']]
 
         next if old_alerts.nil?
@@ -246,8 +244,8 @@ module Interferon
 
     def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
-        !Interferon.need_update(dest, alert_people_pair, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert, people|
+        !dest.need_update(alert, people, existing_alerts)
       end
 
       # Create alerts in destination
@@ -256,8 +254,8 @@ module Interferon
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert_people_pair|
-        alert = alert_people_pair[0]
+      alerts_queue.each do |_name, alert, _people|
+        alert = alert[0]
         old_alerts = to_remove[alert['name']]
 
         next if old_alerts.nil?

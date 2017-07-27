@@ -67,7 +67,7 @@ module Interferon::Destinations
     end
 
     def generate_message(message, people)
-      [message, ALERT_KEY, people.map { |p| "@#{p}" }].flatten.join("\n")
+      [message, ALERT_KEY, people.sort.map { |p| "@#{p}" }].flatten.join("\n")
     end
 
     def fetch_existing_alerts
