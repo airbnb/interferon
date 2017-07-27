@@ -106,11 +106,11 @@ module Interferon
           people_count += people.count
         end
 
-        log.info "read #{people_count} people in #{source_groups.count} groups" \
+        log.info "read #{people_count} people in #{source_groups.count} groups " \
                  "from source #{source.class.name}"
       end
 
-      log.info "total of #{groups.values.flatten.count} people in #{groups.count} groups" \
+      log.info "total of #{groups.values.flatten.count} people in #{groups.count} groups " \
                "from #{sources.count} sources"
 
       statsd.gauge('groups.sources', sources.count)
