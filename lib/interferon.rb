@@ -190,8 +190,8 @@ module Interferon
       end
 
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |_name, alert, people|
-        !dest.need_update(alert, people, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
+        !dest.need_update(alert_people_pair, existing_alerts)
       end
 
       # Add dry-run prefix to alerts and delete id to avoid impacting real alerts
@@ -204,7 +204,8 @@ module Interferon
       end
 
       # Build new queue with dry-run prefixes and ensure they are silenced
-      alerts_queue.each do |_name, alert, people|
+      alerts_queue.each do |_name, alert_people_pair|
+        alert, _people = alert_people_pair
         dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
         alert.change_name(dry_run_alert_name)
         alert.silence
@@ -216,7 +217,8 @@ module Interferon
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert, people|
+      alerts_queue.each do |_name, alert_people_pair|
+        alert, _people = alert_people_pair
         old_alerts = to_remove[alert['name']]
 
         next if old_alerts.nil?
@@ -244,8 +246,8 @@ module Interferon
 
     def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |_name, alert, people|
-        !dest.need_update(alert, people, existing_alerts)
+      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
+        !dest.need_update(alert_people_pair, existing_alerts)
       end
 
       # Create alerts in destination
@@ -254,8 +256,8 @@ module Interferon
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert, _people|
-        alert = alert[0]
+      alerts_queue.each do |_name, alert_people_pair|
+        alert, _people = alert_people_pair
         old_alerts = to_remove[alert['name']]
 
         next if old_alerts.nil?
@@ -375,61 +377,6 @@ module Interferon
         alerts_queue.merge! alerts_generated
       end
       alerts_queue
-    end
-
-    def self.need_update(dest, alert_people_pair, existing_alerts_from_api)
-      alert = alert_people_pair[0]
-      existing = existing_alerts_from_api[alert['name']]
-      if existing.nil?
-        true
-      else
-        !same_alerts(dest, alert_people_pair, existing)
-      end
-    end
-
-    def self.normalize_monitor_type(monitor_type)
-      # Convert 'query alert' type to 'metric alert' type. They can used interchangeably when
-      # submitting monitors to Datadog. Datadog will automatically do the conversion to 'query
-      # alert' for a "complex" query that includes multiple metrics/tags while using 'metric alert'
-      # for monitors that include a single scope/metric.
-      monitor_type == 'query alert' ? 'metric alert' : monitor_type
-    end
-
-    def self.same_alerts(dest, alert_people_pair, alert_api_json)
-      alert, people = alert_people_pair
-
-      prev_alert = {
-        monitor_type: normalize_monitor_type(alert_api_json['type']),
-        query: alert_api_json['query'].strip,
-        message: alert_api_json['message'].strip,
-        evaluation_delay: alert_api_json['options']['evaluation_delay'],
-        notify_no_data: alert_api_json['options']['notify_no_data'],
-        notify_audit: alert_api_json['options']['notify_audit'],
-        no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
-        silenced: alert_api_json['options']['silenced'],
-        thresholds: alert_api_json['options']['thresholds'],
-        timeout_h: alert_api_json['options']['timeout_h'],
-      }
-
-      new_alert = {
-        monitor_type: normalize_monitor_type(alert['monitor_type']),
-        query: alert['metric']['datadog_query'],
-        message: dest.generate_message(alert['message'], people).strip,
-        evaluation_delay: alert['evaluation_delay'],
-        notify_no_data: alert['notify_no_data'],
-        notify_audit: alert['notify']['audit'],
-        no_data_timeframe: alert['no_data_timeframe'],
-        silenced: alert['silenced'],
-        thresholds: alert['thresholds'],
-        timeout_h: alert['timeout_h'],
-      }
-
-      unless alert['require_full_window'].nil?
-        prev_alert[:require_full_window] = alert_api_json['options']['require_full_window']
-        new_alert[:require_full_window] = alert['require_full_window']
-      end
-
-      prev_alert == new_alert
     end
   end
 end
