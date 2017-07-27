@@ -128,7 +128,7 @@ module Interferon
     end
 
     def audit(v = nil, &block)
-      get_or_set(:@audit, v, block, true)
+      get_or_set(:@audit, v, block, false)
     end
   end
 
