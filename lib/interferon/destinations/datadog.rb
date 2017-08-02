@@ -66,8 +66,8 @@ module Interferon::Destinations
       @api_errors ||= []
     end
 
-    def generate_message(message, people)
-      [message, ALERT_KEY, people.map { |p| "@#{p}" }].flatten.join("\n")
+    def self.generate_message(message, people)
+      [message, ALERT_KEY, people.sort.map { |p| "@#{p}" }].flatten.join("\n")
     end
 
     def fetch_existing_alerts
@@ -132,7 +132,7 @@ module Interferon::Destinations
       # create a message which includes the notifications
       # Datadog may have a race condition where alerts created in a bad state may be triggered
       # during the dry-run creation process. Delete people from dry-run alerts to avoid this
-      message = generate_message(alert['message'], people)
+      message = self.class.generate_message(alert['message'], people)
 
       # create the hash of options to send to datadog
       alert_options = {
@@ -201,7 +201,7 @@ EOM
         alert['monitor_type'],
         datadog_query,
         name: alert['name'],
-        message: @dry_run ? generate_message(alert, []) : message,
+        message: @dry_run ? self.class.generate_message(alert, []) : message,
         options: alert_options
       )
     end
@@ -234,10 +234,10 @@ EOM
           alert['monitor_type'],
           datadog_query,
           name: alert['name'],
-          message: generate_message(alert, []),
+          message: self.class.generate_message(alert, []),
           options: alert_options
         )
-      elsif alert['monitor_type'] == existing_alert['type']
+      elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
         resp = @dog.update_monitor(
           id,
           datadog_query,
@@ -290,6 +290,67 @@ EOM
       end
     end
 
+    def remove_alert_by_id(alert_id)
+      # This should only be used by dry-run to clean up created dry-run alerts
+      log.debug("deleting alert, id: #{alert_id}")
+      resp = @dog.delete_monitor(alert_id)
+      code = resp[0].to_i
+      log_datadog_response_code(resp, code, :deleting)
+    end
+
+    def need_update(alert_people_pair, existing_alerts_from_api)
+      alert, people = alert_people_pair
+      existing = existing_alerts_from_api[alert['name']]
+      existing.nil? || !self.class.same_alerts(alert, people, existing)
+    end
+
+    def self.normalize_monitor_type(monitor_type)
+      # Convert 'query alert' type to 'metric alert' type. They can used interchangeably when
+      # submitting monitors to Datadog. Datadog will automatically do the conversion to 'query
+      # alert' for a "complex" query that includes multiple metrics/tags while using 'metric alert'
+      # for monitors that include a single scope/metric.
+      monitor_type == 'query alert' ? 'metric alert' : monitor_type
+    end
+
+    def self.same_monitor_type(monitor_type_a, monitor_type_b)
+      normalize_monitor_type(monitor_type_a) == normalize_monitor_type(monitor_type_b)
+    end
+
+    def self.same_alerts(alert, people, alert_api_json)
+      prev_alert = {
+        monitor_type: normalize_monitor_type(alert_api_json['type']),
+        query: alert_api_json['query'].strip,
+        message: alert_api_json['message'].strip,
+        evaluation_delay: alert_api_json['options']['evaluation_delay'],
+        notify_no_data: alert_api_json['options']['notify_no_data'],
+        notify_audit: alert_api_json['options']['notify_audit'],
+        no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
+        silenced: alert_api_json['options']['silenced'],
+        thresholds: alert_api_json['options']['thresholds'],
+        timeout_h: alert_api_json['options']['timeout_h'],
+      }
+
+      new_alert = {
+        monitor_type: normalize_monitor_type(alert['monitor_type']),
+        query: alert['metric']['datadog_query'],
+        message: generate_message(alert['message'], people).strip,
+        evaluation_delay: alert['evaluation_delay'],
+        notify_no_data: alert['notify_no_data'],
+        notify_audit: alert['notify']['audit'],
+        no_data_timeframe: alert['no_data_timeframe'],
+        silenced: alert['silenced'],
+        thresholds: alert['thresholds'],
+        timeout_h: alert['timeout_h'],
+      }
+
+      unless alert['require_full_window'].nil?
+        prev_alert[:require_full_window] = alert_api_json['options']['require_full_window']
+        new_alert[:require_full_window] = alert['require_full_window']
+      end
+
+      prev_alert == new_alert
+    end
+
     def report_stats
       @stats.each do |k, v|
         statsd.gauge("datadog.#{k}", v)
@@ -305,14 +366,6 @@ EOM
           @stats[:alerts_to_be_deleted],
         ]
       )
-    end
-
-    def remove_alert_by_id(alert_id)
-      # This should only be used by dry-run to clean up created dry-run alerts
-      log.debug("deleting alert, id: #{alert_id}")
-      resp = @dog.delete_monitor(alert_id)
-      code = resp[0].to_i
-      log_datadog_response_code(resp, code, :deleting)
     end
 
     def log_datadog_response_code(resp, code, action, alert = nil)
