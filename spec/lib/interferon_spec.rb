@@ -252,7 +252,7 @@ describe Interferon::Destinations::Datadog do
 
   DEFAULT_OPTIONS = {
     'evaluation_delay' => nil,
-    'notify_audit' => true,
+    'notify_audit' => false,
     'notify_no_data' => false,
     'silenced' => {},
     'thresholds' => nil,
