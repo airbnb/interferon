@@ -301,11 +301,7 @@ EOM
     def need_update(alert_people_pair, existing_alerts_from_api)
       alert, people = alert_people_pair
       existing = existing_alerts_from_api[alert['name']]
-      if existing.nil?
-        true
-      else
-        !self.class.same_alerts(alert, people, existing)
-      end
+      existing.nil? || !self.class.same_alerts(alert, people, existing)
     end
 
     def self.normalize_monitor_type(monitor_type)
