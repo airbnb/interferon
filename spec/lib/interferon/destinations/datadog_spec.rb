@@ -88,8 +88,8 @@ describe Interferon::Destinations::Datadog do
       datadog.create_alert(mock_alert, mock_people)
     end
 
-    it 'always calls monitor in dry-run' do
-      expect_any_instance_of(Dogapi::Client).to receive(:monitor).and_return([200, ''])
+    it 'calls validate monitor in dry-run' do
+      expect_any_instance_of(Dogapi::Client).to receive(:validate_monitor).and_return([200, ''])
       expect(datadog_dry_run).to receive(:existing_alerts).and_return(mock_response)
       datadog_dry_run.create_alert(mock_alert, mock_people)
     end
@@ -112,14 +112,6 @@ describe Interferon::Destinations::Datadog do
     it 'does not call dogapi delete_monitor when ALERT_KEY is missing' do
       expect_any_instance_of(Dogapi::Client).to_not receive(:delete_monitor)
       datadog.remove_alert(mock_alert)
-    end
-  end
-
-  describe '.remove_alert_by_id' do
-    it 'calls dogapi delete_monitor' do
-      expect_any_instance_of(Dogapi::Client).to receive(:delete_monitor)
-        .with(mock_alert_id).and_return([200, ''])
-      datadog.remove_alert_by_id(mock_alert_id)
     end
   end
 end

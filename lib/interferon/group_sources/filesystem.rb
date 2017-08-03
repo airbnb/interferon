@@ -16,7 +16,7 @@ module Interferon::GroupSources
       @paths.each do |path|
         path = File.expand_path(path)
         unless Dir.exist?(path)
-          log.warn "no such directory #{path} for reading group files"
+          log.warn("no such directory #{path} for reading group files")
           next
         end
 
@@ -24,9 +24,9 @@ module Interferon::GroupSources
           begin
             group = YAML.parse(File.read(group_file))
           rescue YAML::SyntaxError => e
-            log.error "syntax error in group file #{group_file}: #{e}"
+            log.error("syntax error in group file #{group_file}: #{e}")
           rescue StandardError => e
-            log.warn "error reading group file #{group_file}: #{e}"
+            log.warn("error reading group file #{group_file}: #{e}")
           else
             group = group.to_ruby
             if group['people']
@@ -44,7 +44,7 @@ module Interferon::GroupSources
         if groups.include?(group)
           groups[aliased_group] = groups[group]
         else
-          log.warn "Alias not found for #{group} but used by #{aliased_group} in #{group_file}"
+          log.warn("Alias not found for #{group} but used by #{aliased_group} in #{group_file}")
         end
       end
 

@@ -3,6 +3,7 @@ We use a fork of AirBnB's Inteferon with the following modifications:
   * changed alert key
   * alerts can be read from a multi-level directory
   * support for fallback_groups
+  * support for include_tags
 
 # Interferon #
 
@@ -35,6 +36,7 @@ It accepts the following parameters:
 * `group_sources` -- a list of sources which can return groups of people to alert
 * `host_sources` -- a list of sources which can read inventory systems and return lists of hosts to monitor
 * `destinations` -- a list of alerting providers, which can monitor metrics and dispatch alerts as specified in your alerts dsl files
+* `processes` -- number of processes to run the alert generation on (optional; default is to use all available cores)
 
 For more information, see [config.example.yaml](config.example.yaml) file in this repo.
 

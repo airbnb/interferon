@@ -35,12 +35,12 @@ module Interferon
         options =   source['options'] || {}
 
         if type.nil?
-          log.warn "#{@loader_for} ##{idx} does not have a 'type' set; 'type' is required"
+          log.warn("#{@loader_for} ##{idx} does not have a 'type' set; 'type' is required")
           next
         end
 
         unless enabled
-          log.info "skipping #{@loader_for} #{type} because it's not enabled"
+          log.info("skipping #{@loader_for} #{type} because it's not enabled")
           next
         end
 
@@ -68,9 +68,11 @@ module Interferon
           require full_path
           klass = @module.const_get(class_name)
         rescue LoadError => e
-          log.debug "LoadError looking for #{@loader_for} file #{type} at #{full_path}: #{e}"
+          log.debug("LoadError looking for #{@loader_for} file #{type} at #{full_path}: #{e}")
         rescue NameError => e
-          log.debug "NameError looking for #{@loader_for} class #{class_name} in #{full_path}: #{e}"
+          log.debug(
+            "NameError looking for #{@loader_for} class #{class_name}  in #{full_path}: #{e}"
+          )
         end
 
         break if klass

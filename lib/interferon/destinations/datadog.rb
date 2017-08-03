@@ -119,10 +119,10 @@ module Interferon::Destinations
         @stats[:manually_created_alerts] = \
           @existing_alerts.reject { |_n, a| a['message'].include?(ALERT_KEY) }.length
 
-        log.info 'datadog: found %d existing alerts; %d were manually created' % [
-          @existing_alerts.length,
-          @stats[:manually_created_alerts],
-        ]
+        log.info(
+          "datadog: found #{@existing_alerts.length} existing alerts; " \
+          "#{@stats[:manually_created_alerts]} were manually created"
+        )
       end
 
       @existing_alerts
@@ -201,13 +201,25 @@ Options:
 EOM
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
-      @dog.monitor(
-        alert['monitor_type'],
-        datadog_query,
+      monitor_options = {
         name: alert['name'],
-        message: @dry_run ? self.class.generate_message(alert, []) : message,
-        options: alert_options
-      )
+        message: message,
+        options: alert_options,
+      }
+
+      if @dry_run
+        @dog.validate_monitor(
+          alert['monitor_type'],
+          datadog_query,
+          monitor_options
+        )
+      else
+        @dog.monitor(
+          alert['monitor_type'],
+          datadog_query,
+          monitor_options
+        )
+      end
     end
 
     def update_datadog_alert(alert, datadog_query, message, alert_options, existing_alert)
@@ -233,21 +245,23 @@ EOM
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 
+      monitor_options = {
+        name: alert['name'],
+        message: message,
+        options: alert_options,
+      }
+
       if @dry_run
-        resp = @dog.monitor(
+        resp = @dog.validate_monitor(
           alert['monitor_type'],
           datadog_query,
-          name: alert['name'],
-          message: self.class.generate_message(alert, []),
-          options: alert_options
+          monitor_options
         )
       elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
         resp = @dog.update_monitor(
           id,
           datadog_query,
-          name: alert['name'],
-          message: message,
-          options: alert_options
+          monitor_options
         )
 
         # Unmute existing alerts that have been unsilenced.
@@ -263,9 +277,7 @@ EOM
           resp = @dog.monitor(
             alert['monitor_type'],
             datadog_query,
-            name: alert['name'],
-            message: message,
-            options: alert_options
+            monitor_options
           )
         end
       end
@@ -277,6 +289,7 @@ EOM
         @stats[:alerts_to_be_deleted] += 1
         log.info("deleting alert: #{alert['name']}")
 
+        # Safety to protect aginst accident dry_run deletion
         unless @dry_run
           alert['id'].each do |alert_id|
             resp = @dog.delete_monitor(alert_id)
@@ -292,14 +305,6 @@ EOM
       else
         log.warn("not deleting manually-created alert #{alert['id']} (#{alert['name']})")
       end
-    end
-
-    def remove_alert_by_id(alert_id)
-      # This should only be used by dry-run to clean up created dry-run alerts
-      log.debug("deleting alert, id: #{alert_id}")
-      resp = @dog.delete_monitor(alert_id)
-      code = resp[0].to_i
-      log_datadog_response_code(resp, code, :deleting)
     end
 
     def need_update(alert_people_pair, existing_alerts_from_api)
@@ -392,7 +397,7 @@ EOM
                     " response was #{resp[0]}:'#{resp[1].inspect}'")
         end
 
-        # unknown (prob. datadog) error:
+      # unknown (prob. datadog) error:
       elsif code > 400 || code == -1
         @stats[:api_unknown_errors] += 1
         unless alert.nil?

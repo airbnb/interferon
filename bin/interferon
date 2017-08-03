@@ -11,11 +11,11 @@ options = {}
 optparse = OptionParser.new do |opts|
   opts.banner = %(Usage: interferon --config /path/to/interferon/config)
 
-  opts.on('-c config', '--config config', String, 'Path to interferon config') do |key, _value|
+  opts.on('-c', '--config config', String, 'Path to interferon config') do |key|
     options[:config] = key
   end
 
-  opts.on('-n', '--dry-run', "Don\'t update alert destinations") do
+  opts.on('-n', '--dry-run', "Don't update alert destinations") do
     options[:dry_run] = true
   end
 
@@ -28,7 +28,7 @@ end
 def parseconfig(filename)
   begin
     e = ERB.new(File.read(filename)).result
-    c = YAML.parse(e)
+    config = YAML.parse(e)
   rescue Errno::ENOENT => e
     raise ArgumentError, "config file does not exist:\n#{e.inspect}"
   rescue Errno::EACCES => e
@@ -36,7 +36,7 @@ def parseconfig(filename)
   rescue YAML::SyntaxError => e
     raise "config file #{filename} contains invalid YAML:\n#{e.inspect}"
   end
-  c.to_ruby
+  config.to_ruby
 end
 
 # parse command line arguments
@@ -57,13 +57,7 @@ end
 
 ENV['DEBUG'] = '1' if config['verbose_logging']
 
-a = Interferon::Interferon.new(
-  config['alerts_repo_path'],
-  config['group_sources'] || {},
-  config['host_sources'],
-  config['destinations']
-)
-
-a.run(options[:dry_run])
+interferon = Interferon::Interferon.new(config, options[:dry_run])
+interferon.run
 
 puts 'interferon signaling complete!'
