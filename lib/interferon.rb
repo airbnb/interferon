@@ -23,28 +23,28 @@ module Interferon
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similar hash from type => options for each alerter
-    def initialize(alerts_repo_path, groups_sources, host_sources, destinations,
-                   dry_run = false, processes = nil)
-      @alerts_repo_path = alerts_repo_path
-      @groups_sources = groups_sources
-      @host_sources = host_sources
-      @destinations = destinations
+    def initialize(config, dry_run = false, processes = nil)
+      @alerts_repo_path = config['alerts_repo_path']
+      @group_sources = config['group_sources'] || {}
+      @host_sources = config['host_sources']
+      @destinations = config['destinations']
+      @alerts_repo_type = config['alerts_repo_type']
+      @alerts_repo_last_modified = config['alerts_repo_last_modified']
       @dry_run = dry_run
       @processes = processes
       @request_shutdown = false
     end
 
-    def run(dry_run = false)
+    def run
       Signal.trap('TERM') do
         log.info 'SIGTERM received. shutting down gracefully...'
         @request_shutdown = true
       end
-      @dry_run = dry_run
       run_desc = @dry_run ? 'dry run' : 'run'
       log.info "beginning alerts #{run_desc}"
 
       alerts = read_alerts
-      groups = read_groups(@groups_sources)
+      groups = read_groups(@group_sources)
       hosts = read_hosts(@host_sources)
 
       @destinations.each do |dest|

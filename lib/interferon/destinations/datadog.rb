@@ -386,7 +386,7 @@ EOM
                     " response was #{resp[0]}:'#{resp[1].inspect}'")
         end
 
-        # unknown (prob. datadog) error:
+      # unknown (prob. datadog) error:
       elsif code > 400 || code == -1
         @stats[:api_unknown_errors] += 1
         unless alert.nil?
