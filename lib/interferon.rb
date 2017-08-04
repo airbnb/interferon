@@ -156,11 +156,7 @@ module Interferon
       # get already-defined alerts
       existing_alerts = dest.existing_alerts
 
-      if @dry_run
-        do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
-      else
-        do_regular_update(dest, hosts, alerts, existing_alerts, groups)
-      end
+      run_update(dest, hosts, alerts, existing_alerts, groups)
 
       unless @request_shutdown
         # run time summary
@@ -179,72 +175,7 @@ module Interferon
       raise dest.api_errors.to_s if @dry_run && !dest.api_errors.empty?
     end
 
-    def do_dry_run_update(dest, hosts, alerts, existing_alerts, groups)
-      # Track these to clean up dry-run alerts from previous runs
-      existing_dry_run_alerts = []
-      existing_alerts.each do |name, alert|
-        if name.start_with?(DRY_RUN_ALERTS_NAME_PREFIX)
-          existing_dry_run_alerts << [alert['name'], [alert['id']]]
-          existing_alerts.delete(name)
-        end
-      end
-
-      alerts_queue = build_alerts_queue(hosts, alerts, groups)
-      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
-        !dest.need_update(alert_people_pair, existing_alerts)
-      end
-
-      # Add dry-run prefix to alerts and delete id to avoid impacting real alerts
-      existing_alerts.keys.each do |name|
-        existing_alert = existing_alerts[name]
-        dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + name
-        existing_alert['name'] = dry_run_alert_name
-        existing_alert['id'] = [nil]
-        existing_alerts[dry_run_alert_name] = existing_alerts.delete(name)
-      end
-
-      # Build new queue with dry-run prefixes and ensure they are silenced
-      alerts_queue.each do |_name, alert_people_pair|
-        alert, _people = alert_people_pair
-        dry_run_alert_name = DRY_RUN_ALERTS_NAME_PREFIX + alert['name']
-        alert.change_name(dry_run_alert_name)
-        alert.silence
-      end
-
-      # Create alerts in destination
-      created_alerts = create_alerts(dest, updates_queue)
-
-      # Existing alerts are pruned until all that remains are
-      # alerts that aren't being generated anymore
-      to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert_people_pair|
-        alert, _people = alert_people_pair
-        old_alerts = to_remove[alert['name']]
-
-        next if old_alerts.nil?
-        if old_alerts['id'].length == 1
-          to_remove.delete(alert['name'])
-        else
-          old_alerts['id'] = old_alerts['id'].drop(1)
-        end
-      end
-
-      # Clean up alerts not longer being generated
-      to_remove.each do |_name, alert|
-        break if @request_shutdown
-        dest.remove_alert(alert)
-      end
-
-      # Clean up dry-run created alerts
-      (created_alerts + existing_dry_run_alerts).each do |alert_id_pair|
-        alert_ids = alert_id_pair[1]
-        alert_ids.each do |alert_id|
-          dest.remove_alert_by_id(alert_id)
-        end
-      end
-    end
-
-    def do_regular_update(dest, hosts, alerts, existing_alerts, groups)
+    def run_update(dest, hosts, alerts, existing_alerts, groups)
       alerts_queue = build_alerts_queue(hosts, alerts, groups)
       updates_queue = alerts_queue.reject do |_name, alert_people_pair|
         !dest.need_update(alert_people_pair, existing_alerts)
@@ -252,6 +183,9 @@ module Interferon
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
+
+      # Do not continue to remove alerts during dry-run
+      return if @dry_run
 
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
