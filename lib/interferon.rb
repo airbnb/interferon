@@ -32,6 +32,7 @@ module Interferon
       @alerts_repo_last_modified = config['alerts_repo_last_modified']
       @dry_run = dry_run
       @processes = processes
+      @evaluation_errors = []
       @request_shutdown = false
     end
 
@@ -141,22 +142,25 @@ module Interferon
     end
 
     def update_alerts(destinations, hosts, alerts, groups)
+      alerts_queue, error_count = build_alerts_queue(hosts, alerts, groups)
+      raise "Some alerts failed to apply or evaluate for all hosts" if @dry_run && error_count > 0
+
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
         log.info "updating alerts on #{dest.class.name}"
-        update_alerts_on_destination(dest, hosts, alerts, groups)
+        update_alerts_on_destination(dest, hosts, alerts_queue, groups)
       end
     end
 
-    def update_alerts_on_destination(dest, hosts, alerts, groups)
+    def update_alerts_on_destination(dest, hosts, alerts_queue, groups)
       # track some counters/stats per destination
       start_time = Time.new.to_f
 
       # get already-defined alerts
       existing_alerts = dest.existing_alerts
 
-      run_update(dest, hosts, alerts, existing_alerts, groups)
+      run_update(dest, hosts, alerts_queue, existing_alerts, groups)
 
       unless @request_shutdown
         # run time summary
@@ -172,11 +176,12 @@ module Interferon
         dest.report_stats
       end
 
-      raise dest.api_errors.to_s if @dry_run && !dest.api_errors.empty?
+      if @dry_run
+        raise dest.api_errors.to_s unless dest.api_errors.empty?
+      end
     end
 
-    def run_update(dest, hosts, alerts, existing_alerts, groups)
-      alerts_queue = build_alerts_queue(hosts, alerts, groups)
+    def run_update(dest, hosts, alerts_queue, existing_alerts, groups)
       updates_queue = alerts_queue.reject do |_name, alert_people_pair|
         !dest.need_update(alert_people_pair, existing_alerts)
       end
@@ -234,16 +239,20 @@ module Interferon
 
     def build_alerts_queue(hosts, alerts, groups)
       alerts_queue = {}
+      errors_count = 0
+
       # create or update alerts; mark when we've done that
       result = Parallel.map(alerts, in_processes: @processes) do |alert|
         break if @request_shutdown
         alerts_generated = {}
+        alert_generation_error_count = 0
         counters = {
-          errors: 0,
-          evals: 0,
-          applies: 0,
-          hosts: hosts.length,
+          :errors => 0,
+          :evals => 0,
+          :applies => 0,
+          :hosts => hosts.length
         }
+
         last_eval_error = nil
 
         hosts.each do |hostinfo|
@@ -287,12 +296,15 @@ module Interferon
 
         # did the alert fail to evaluate on all hosts?
         if counters[:errors] == counters[:hosts] && !last_eval_error.nil?
-          log.error "alert #{alert} failed to evaluate in the context of all hosts!"
-          log.error "last error on alert #{alert}: #{last_eval_error}"
+          log.error("alert #{alert} failed to evaluate in the context of all hosts!")
+          log.error("last error on alert #{alert}: #{last_eval_error}")
 
           statsd.gauge('alerts.evaluate.failed_on_all', 1, tags: ["alert:#{alert}"])
-          log.debug "alert #{alert}: " \
-                    "error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
+          log.debug(
+            "alert #{alert}: " \
+            "error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
+          )
+          alert_generation_error_count += 1
         else
           statsd.gauge('alerts.evaluate.failed_on_all', 0, tags: ["alert:#{alert}"])
         end
@@ -300,17 +312,19 @@ module Interferon
         # did the alert apply to any hosts?
         if counters[:applies] == 0
           statsd.gauge('alerts.evaluate.never_applies', 1, tags: ["alert:#{alert}"])
-          log.warn "alert #{alert} did not apply to any hosts"
+          log.warn("alert #{alert} did not apply to any hosts")
+          alert_generation_error_count += 1
         else
           statsd.gauge('alerts.evaluate.never_applies', 0, tags: ["alert:#{alert}"])
         end
-        alerts_generated
+        [alerts_generated, alert_generation_error_count]
       end
 
-      result.each do |alerts_generated|
-        alerts_queue.merge! alerts_generated
+      result.each do |generated_alerts, alert_generation_error_count|
+        alerts_queue.merge!(generated_alerts)
+        errors_count += alert_generation_error_count
       end
-      alerts_queue
+      [alerts_queue, errors_count]
     end
   end
 end
