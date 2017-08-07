@@ -38,11 +38,11 @@ module Interferon
 
     def run
       Signal.trap('TERM') do
-        log.info 'SIGTERM received. shutting down gracefully...'
+        log.info('SIGTERM received. shutting down gracefully...')
         @request_shutdown = true
       end
       run_desc = @dry_run ? 'dry run' : 'run'
-      log.info "beginning alerts #{run_desc}"
+      log.info("beginning alerts #{run_desc}")
 
       alerts = read_alerts
       groups = read_groups(@group_sources)
@@ -56,9 +56,9 @@ module Interferon
       update_alerts(@destinations, hosts, alerts, groups)
 
       if @request_shutdown
-        log.info "interferon #{run_desc} shut down by SIGTERM"
+        log.info("interferon #{run_desc} shut down by SIGTERM")
       else
-        log.info "interferon #{run_desc} complete"
+        log.info("interferon #{run_desc} complete")
       end
     end
 
@@ -76,14 +76,14 @@ module Interferon
         begin
           alert = Alert.new(alert_file)
         rescue StandardError => e
-          log.warn "error reading alert file #{alert_file}: #{e}"
+          log.warn("error reading alert file #{alert_file}: #{e}")
           failed += 1
         else
           alerts << alert
         end
       end
 
-      log.info "read #{alerts.count} alerts files from #{path}"
+      log.info("read #{alerts.count} alerts files from #{path}")
 
       statsd.gauge('alerts.read.count', alerts.count)
       statsd.gauge('alerts.read.failed', failed)
@@ -107,12 +107,16 @@ module Interferon
           people_count += people.count
         end
 
-        log.info "read #{people_count} people in #{source_groups.count} groups " \
-                 "from source #{source.class.name}"
+        log.info(
+          "read #{people_count} people in #{source_groups.count} groups " \
+          "from source #{source.class.name}"
+        )
       end
 
-      log.info "total of #{groups.values.flatten.count} people in #{groups.count} groups " \
-               "from #{sources.count} sources"
+      log.info(
+        "total of #{groups.values.flatten.count} people in #{groups.count} groups " \
+        "from #{sources.count} sources"
+      )
 
       statsd.gauge('groups.sources', sources.count)
       statsd.gauge('groups.count', groups.count)
@@ -132,35 +136,35 @@ module Interferon
         hosts << source_hosts
 
         statsd.gauge('hosts.count', source_hosts.count, tags: ["source:#{source.class.name}"])
-        log.info "read #{source_hosts.count} hosts from source #{source.class.name}"
+        log.info("read #{source_hosts.count} hosts from source #{source.class.name}")
       end
 
       hosts.flatten!
-      log.info "total of #{hosts.count} entities from #{sources.count} sources"
+      log.info("total of #{hosts.count} entities from #{sources.count} sources")
 
       hosts
     end
 
     def update_alerts(destinations, hosts, alerts, groups)
       alerts_queue, error_count = build_alerts_queue(hosts, alerts, groups)
-      raise "Some alerts failed to apply or evaluate for all hosts" if @dry_run && error_count > 0
+      raise 'Some alerts failed to apply or evaluate for all hosts' if @dry_run && error_count > 0
 
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
         break if @request_shutdown
-        log.info "updating alerts on #{dest.class.name}"
-        update_alerts_on_destination(dest, hosts, alerts_queue, groups)
+        log.info("updating alerts on #{dest.class.name}")
+        update_alerts_on_destination(dest, alerts_queue)
       end
     end
 
-    def update_alerts_on_destination(dest, hosts, alerts_queue, groups)
+    def update_alerts_on_destination(dest, alerts_queue)
       # track some counters/stats per destination
       start_time = Time.new.to_f
 
       # get already-defined alerts
       existing_alerts = dest.existing_alerts
 
-      run_update(dest, hosts, alerts_queue, existing_alerts, groups)
+      run_update(dest, alerts_queue, existing_alerts)
 
       unless @request_shutdown
         # run time summary
@@ -170,18 +174,16 @@ module Interferon
           run_time,
           tags: ["destination:#{dest.class.name}"]
         )
-        log.info "#{dest.class.name} : run completed in %.2f seconds" % run_time
+        log.info("#{dest.class.name} : run completed in %.2f seconds" % run_time)
 
         # report destination stats
         dest.report_stats
       end
 
-      if @dry_run
-        raise dest.api_errors.to_s unless dest.api_errors.empty?
-      end
+      raise dest.api_errors.to_s if @dry_run && !dest.api_errors.empty?
     end
 
-    def run_update(dest, hosts, alerts_queue, existing_alerts, groups)
+    def run_update(dest, alerts_queue, existing_alerts)
       updates_queue = alerts_queue.reject do |_name, alert_people_pair|
         !dest.need_update(alert_people_pair, existing_alerts)
       end
@@ -220,12 +222,12 @@ module Interferon
       concurrency = dest.concurrency || 10
       unless @request_shutdown
         threads = Array.new(concurrency) do |i|
-          log.info "thread #{i} created"
+          log.info("thread #{i} created")
           t = Thread.new do
             while (name = alerts_to_create.shift)
               break if @request_shutdown
               cur_alert, people = alerts_queue[name]
-              log.debug "creating alert for #{cur_alert[:name]}"
+              log.debug("creating alert for #{cur_alert[:name]}")
               alert_key_ids << dest.create_alert(cur_alert, people)
             end
           end
@@ -247,10 +249,10 @@ module Interferon
         alerts_generated = {}
         alert_generation_error_count = 0
         counters = {
-          :errors => 0,
-          :evals => 0,
-          :applies => 0,
-          :hosts => hosts.length
+          errors: 0,
+          evals: 0,
+          applies: 0,
+          hosts: hosts.length,
         }
 
         last_eval_error = nil
@@ -260,7 +262,7 @@ module Interferon
             alert.evaluate(hostinfo)
             counters[:evals] += 1
           rescue StandardError => e
-            log.debug "Evaluation of alert #{alert} failed in the context of host #{hostinfo}"
+            log.debug("Evaluation of alert #{alert} failed in the context of host #{hostinfo}")
             counters[:errors] += 1
             last_eval_error = e
             next
@@ -268,7 +270,7 @@ module Interferon
 
           # don't define an alert that doesn't apply to this hostinfo
           unless alert[:applies]
-            log.debug "alert #{alert[:name]} doesn't apply to #{hostinfo.inspect}"
+            log.debug("alert #{alert[:name]} doesn't apply to #{hostinfo.inspect}")
             next
           end
 
@@ -291,14 +293,13 @@ module Interferon
         statsd.gauge('alerts.evaluate.applies', counters[:applies], tags: ["alert:#{alert}"])
 
         if counters[:applies] > 0
-          log.info "alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts"
+          log.info("alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts")
         end
 
         # did the alert fail to evaluate on all hosts?
         if counters[:errors] == counters[:hosts] && !last_eval_error.nil?
           log.error("alert #{alert} failed to evaluate in the context of all hosts!")
           log.error("last error on alert #{alert}: #{last_eval_error}")
-
           statsd.gauge('alerts.evaluate.failed_on_all', 1, tags: ["alert:#{alert}"])
           log.debug(
             "alert #{alert}: " \

@@ -1,13 +1,10 @@
 module Interferon
-  attr_accessor :counters
-
   class Alert
     def initialize(path)
       @path = path
       @filename = File.basename(path)
 
       @text = File.read(@path)
-      @counters = Hash.new(0)
 
       @dsl = nil
     end

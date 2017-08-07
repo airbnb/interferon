@@ -80,61 +80,74 @@ describe Interferon::Destinations::Datadog do
     end
 
     it 'does not re-run existing alerts' do
-      alerts = mock_existing_alerts
+      mock_alerts = mock_existing_alerts
       expect(dest).not_to receive(:create_alert)
 
-      interferon.update_alerts_on_destination(
-        dest, ['host'], [alerts['name1'], alerts['name2']], {}
+      alerts_queue, _error_count = interferon.build_alerts_queue(
+        ['host'],
+        [mock_alerts['name1'], mock_alerts['name2']].map { |x| test_alert_from_json(x) },
+        {}
       )
+
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'runs added alerts' do
-      alerts = mock_existing_alerts
-      added = create_test_alert('name3', 'testquery3', '')
+      mock_alerts = mock_existing_alerts
+      alerts = [mock_alerts['name1'], mock_alerts['name2']].map { |x| test_alert_from_json(x) }
+      alerts << create_test_alert('name3', 'testquery3', '')
+
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], alerts, {})
+
       expect(dest).to receive(:create_alert).once.and_call_original
 
-      interferon.update_alerts_on_destination(
-        dest, ['host'], [alerts['name1'], alerts['name2'], added], {}
-      )
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'runs updated alerts' do
       added = create_test_alert('name1', 'testquery3', '')
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
       expect(dest).to receive(:create_alert).once.and_call_original
 
-      interferon.update_alerts_on_destination(dest, ['host'], [added], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'does not delete old alerts' do
       expect(dest).to_not receive(:remove_alert)
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
 
-      interferon.update_alerts_on_destination(dest, ['host'], [], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'does not delete duplicate old alerts' do
       alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = { 'name1' => alert1, 'name2' => alert2 }
+
       dest = MockDest.new(existing_alerts)
       allow(dest).to receive(:report_stats)
 
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
+
       expect(dest).to_not receive(:remove_alert)
 
-      interferon.update_alerts_on_destination(dest, ['host'], [], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'does not delete duplicate old alerts when creating new alert' do
       alert1 = mock_alert_json('name1', 'testquery1', '', nil, [1, 2, 3])
       alert2 = mock_alert_json('name2', 'testquery2', '')
       existing_alerts = { 'name1' => alert1, 'name2' => alert2 }
+
       dest = MockDest.new(existing_alerts)
       allow(dest).to receive(:report_stats)
 
       added = create_test_alert('name1', 'testquery1', '')
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
 
       expect(dest).to_not receive(:remove_alert)
 
-      interferon.update_alerts_on_destination(dest, ['host'], [added], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
   end
 
@@ -148,37 +161,45 @@ describe Interferon::Destinations::Datadog do
     end
 
     it 'does not re-run existing alerts' do
-      alerts = mock_existing_alerts
+      mock_alerts = mock_existing_alerts
       expect(dest).not_to receive(:create_alert)
 
-      interferon.update_alerts_on_destination(
-        dest, ['host'], [alerts['name1'], alerts['name2']], {}
+      alerts_queue, _error_count = interferon.build_alerts_queue(
+        ['host'],
+        [mock_alerts['name1'], mock_alerts['name2']].map { |x| test_alert_from_json(x) },
+        {}
       )
+
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'runs added alerts' do
-      alerts = mock_existing_alerts
-      added = create_test_alert('name3', 'testquery3', '')
+      mock_alerts = mock_existing_alerts
+      alerts = [mock_alerts['name1'], mock_alerts['name2']].map { |x| test_alert_from_json(x) }
+      alerts << create_test_alert('name3', 'testquery3', '')
+
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], alerts, {})
+
       expect(dest).to receive(:create_alert).once.and_call_original
 
-      interferon.update_alerts_on_destination(
-        dest, ['host'], [alerts['name1'], alerts['name2'], added], {}
-      )
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'runs updated alerts' do
       added = create_test_alert('name1', 'testquery3', '')
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
       expect(dest).to receive(:create_alert).once.and_call_original
 
-      interferon.update_alerts_on_destination(dest, ['host'], [added], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'deletes old alerts' do
       alerts = mock_existing_alerts
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
       expect(dest).to receive(:remove_alert).with(alerts['name1'])
       expect(dest).to receive(:remove_alert).with(alerts['name2'])
 
-      interferon.update_alerts_on_destination(dest, ['host'], [], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'deletes duplicate old alerts' do
@@ -189,10 +210,12 @@ describe Interferon::Destinations::Datadog do
       allow(dest).to receive(:remove_alert)
       allow(dest).to receive(:report_stats)
 
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
+
       expect(dest).to receive(:remove_alert).with(existing_alerts['name1'])
       expect(dest).to receive(:remove_alert).with(existing_alerts['name2'])
 
-      interferon.update_alerts_on_destination(dest, ['host'], [], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
 
     it 'deletes duplicate old alerts when creating new alert' do
@@ -203,19 +226,21 @@ describe Interferon::Destinations::Datadog do
       allow(dest).to receive(:report_stats)
 
       added = create_test_alert('name1', 'testquery1', '')
+      alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
 
       expect(dest).to receive(:remove_alert).with(
         mock_alert_json('name1', 'testquery1', '', nil, [2, 3])
       )
       expect(dest).to receive(:remove_alert).with(existing_alerts['name2'])
 
-      interferon.update_alerts_on_destination(dest, ['host'], [added], {})
+      interferon.update_alerts_on_destination(dest, alerts_queue)
     end
   end
 
   def mock_existing_alerts
-    alert1 = mock_alert_json('name1', 'testquery1', '')
-    alert2 = mock_alert_json('name2', 'testquery2', '')
+    mock_message = Interferon::Destinations::Datadog::ALERT_KEY
+    alert1 = mock_alert_json('name1', 'testquery1', mock_message)
+    alert2 = mock_alert_json('name2', 'testquery2', mock_message)
     { 'name1' => alert1, 'name2' => alert2 }
   end
 
@@ -255,6 +280,15 @@ describe Interferon::Destinations::Datadog do
       'id' => id.nil? ? [name[-1]] : id,
       'options' => options,
     }
+  end
+
+  def test_alert_from_json(mock_alert_json)
+    create_test_alert(
+      mock_alert_json['name'],
+      mock_alert_json['query'],
+      mock_alert_json['message'].sub(/#{Interferon::Destinations::Datadog::ALERT_KEY}$/, ''),
+      mock_alert_json['options']
+    )
   end
 
   def create_test_alert(name, datadog_query, message, options = {})

@@ -119,10 +119,10 @@ module Interferon::Destinations
         @stats[:manually_created_alerts] = \
           @existing_alerts.reject { |_n, a| a['message'].include?(ALERT_KEY) }.length
 
-        log.info 'datadog: found %d existing alerts; %d were manually created' % [
-          @existing_alerts.length,
-          @stats[:manually_created_alerts],
-        ]
+        log.info(
+          "datadog: found #{@existing_alerts.length} existing alerts; " \
+          "#{@stats[:manually_created_alerts]} were manually created"
+        )
       end
 
       @existing_alerts
@@ -200,7 +200,7 @@ EOM
       monitor_options = {
         name: alert['name'],
         message: message,
-        options: alert_options
+        options: alert_options,
       }
 
       if @dry_run
@@ -244,7 +244,7 @@ EOM
       monitor_options = {
         name: alert['name'],
         message: message,
-        options: alert_options
+        options: alert_options,
       }
 
       if @dry_run
