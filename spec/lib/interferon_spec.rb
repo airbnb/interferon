@@ -71,7 +71,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   context 'dry_run_update_alerts_on_destination' do
-    let(:interferon) { Interferon::Interferon.new({}, true, 0) }
+    let(:interferon) { Interferon::Interferon.new({ 'processes' => 0 }, true) }
 
     before do
       allow_any_instance_of(MockAlert).to receive(:evaluate)
@@ -152,7 +152,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   context 'update_alerts_on_destination' do
-    let(:interferon) { Interferon::Interferon.new({}, false, 0) }
+    let(:interferon) { Interferon::Interferon.new({ 'processes' => 0 }, false) }
 
     before do
       allow_any_instance_of(MockAlert).to receive(:evaluate)

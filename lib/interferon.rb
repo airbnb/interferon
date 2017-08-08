@@ -23,16 +23,13 @@ module Interferon
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similar hash from type => options for each alerter
-    def initialize(config, dry_run = false, processes = nil)
+    def initialize(config, dry_run = false)
       @alerts_repo_path = config['alerts_repo_path']
       @group_sources = config['group_sources'] || {}
       @host_sources = config['host_sources']
       @destinations = config['destinations']
-      @alerts_repo_type = config['alerts_repo_type']
-      @alerts_repo_last_modified = config['alerts_repo_last_modified']
+      @processes = config['processes']
       @dry_run = dry_run
-      @processes = processes
-      @evaluation_errors = []
       @request_shutdown = false
     end
 

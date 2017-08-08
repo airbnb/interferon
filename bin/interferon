@@ -14,10 +14,6 @@ optparse = OptionParser.new do |opts|
     options[:config] = key
   end
 
-  opts.on('-p', '--processes processes', Integer, 'Number of processes to run') do |key|
-    options[:processes] = key
-  end
-
   opts.on('-n', '--dry-run', "Don't update alert destinations") do
     options[:dry_run] = true
   end
@@ -59,7 +55,7 @@ end
 
 ENV['DEBUG'] = '1' if config['verbose_logging']
 
-interferon = Interferon::Interferon.new(config, options[:dry_run], options[:processes])
+interferon = Interferon::Interferon.new(config, options[:dry_run])
 interferon.run
 
 puts 'interferon signaling complete!'
