@@ -3,7 +3,11 @@ We use a fork of AirBnB's Inteferon with the following modifications:
   * changed alert key
   * alerts can be read from a multi-level directory
   * support for fallback_groups
-  * support for include_tags
+  * runs the config file through ERB for sekrits
+  * no brittle interpolation of regex in interferon_spec.rb#test_alert_from_json
+  * slight gem dependency version differences
+  * removed .travis.yml
+  * in spec/spec_helper.rb, set `config.warning = true`
 
 # Interferon #
 

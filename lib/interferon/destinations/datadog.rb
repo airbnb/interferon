@@ -37,6 +37,7 @@ module Interferon::Destinations
       @dog = Dogapi::Client.new(*args)
 
       @existing_alerts = nil
+      @max_mute_minutes = options['max_mute_minutes']
       @dry_run = options['dry_run']
 
       # Datadog communication threads
@@ -66,8 +67,15 @@ module Interferon::Destinations
       @api_errors ||= []
     end
 
-    def self.generate_message(message, people)
-      [message, ALERT_KEY, people.sort.map { |p| "@#{p}" }].flatten.join("\n")
+    def self.generate_message(message, people, options = {})
+      mentions = people.sort.map { |p| "@#{p}" }
+
+      unless options[:notify_recovery]
+        # Only mention on alert/warning
+        mentions = "{{^is_recovery}}#{mentions}{{/is_recovery}}"
+      end
+
+      [message, ALERT_KEY, mentions].flatten.join("\n")
     end
 
     def fetch_existing_alerts
@@ -132,7 +140,11 @@ module Interferon::Destinations
       # create a message which includes the notifications
       # Datadog may have a race condition where alerts created in a bad state may be triggered
       # during the dry-run creation process. Delete people from dry-run alerts to avoid this
-      message = self.class.generate_message(alert['message'], people)
+      message = self.class.generate_message(
+        alert['message'],
+        people,
+        notify_recovery: alert['notify']['recovery']
+      )
 
       # create the hash of options to send to datadog
       alert_options = {
@@ -142,6 +154,10 @@ module Interferon::Destinations
         silenced: alert['silenced'],
         timeout_h: alert['timeout_h'],
       }
+
+      unless alert['notify']['include_tags'].nil?
+        alert_options[:include_tags] = alert['notify']['include_tags']
+      end
 
       unless alert['evaluation_delay'].nil?
         alert_options[:evaluation_delay] = alert['evaluation_delay']
@@ -153,10 +169,6 @@ module Interferon::Destinations
 
       unless alert['thresholds'].nil?
         alert_options[:thresholds] = alert['thresholds']
-      end
-
-      if !alert['include_tags'].nil?
-        alert_options[:include_tags] = alert['include_tags']
       end
 
       datadog_query = alert['metric']['datadog_query']
@@ -264,9 +276,15 @@ EOM
           monitor_options
         )
 
-        # Unmute existing alerts that have been unsilenced.
+        # Unmute existing alerts that exceed the max silenced time
         # Datadog does not allow updates to silencing via the update_alert API call.
-        if !existing_alert['options']['silenced'].empty? && alert_options[:silenced].empty?
+        silenced = existing_alert['options']['silenced']
+        if !@max_mute_minutes.nil?
+          silenced = silenced.values.reject do |t|
+            t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
+          end
+          @dog.unmute_monitor(id) if alert_options[:silenced].empty? && silenced.empty?
+        elsif alert_options[:silenced].empty? && !silenced.empty?
           @dog.unmute_monitor(id)
         end
       else
@@ -331,27 +349,31 @@ EOM
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
+        include_tags: alert_api_json['options']['include_tags'],
         notify_no_data: alert_api_json['options']['notify_no_data'],
         notify_audit: alert_api_json['options']['notify_audit'],
         no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
         silenced: alert_api_json['options']['silenced'],
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
-        include_tags: alert_api_json['options']['include_tags'],
       }
 
       new_alert = {
         monitor_type: normalize_monitor_type(alert['monitor_type']),
         query: alert['metric']['datadog_query'],
-        message: generate_message(alert['message'], people).strip,
+        message: generate_message(
+          alert['message'],
+          people,
+          notify_recovery: alert['notify']['recovery']
+        ).strip,
         evaluation_delay: alert['evaluation_delay'],
+        include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],
         no_data_timeframe: alert['no_data_timeframe'],
         silenced: alert['silenced'],
         thresholds: alert['thresholds'],
         timeout_h: alert['timeout_h'],
-        include_tags: alert['include_tags'],
       }
 
       unless alert['require_full_window'].nil?

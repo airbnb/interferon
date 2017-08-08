@@ -87,10 +87,6 @@ module Interferon
       timeout ? [1, timeout.to_i / 3600].max : nil
     end
 
-    def include_tags(v = nil, &block)
-      get_or_set(:@include_tags, v, block, nil)
-    end
-
     def thresholds(v = nil, &block)
       get_or_set(:@thresholds, v, block, nil)
     end
@@ -129,6 +125,14 @@ module Interferon
 
     def audit(v = nil, &block)
       get_or_set(:@audit, v, block, false)
+    end
+
+    def recovery(v = nil, &block)
+      get_or_set(:@recovery, v, block, true)
+    end
+
+    def include_tags(v = nil, &block)
+      get_or_set(:@include_tags, v, block, nil)
     end
   end
 

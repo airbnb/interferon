@@ -1,3 +1,3 @@
 module Interferon
-  VERSION = "0.2.0-insops".freeze
+  VERSION = "0.2.4-insops".freeze
 end
