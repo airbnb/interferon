@@ -34,6 +34,7 @@ module Interferon
     end
 
     def run
+      start_time = Time.new.to_f
       Signal.trap('TERM') do
         log.info('SIGTERM received. shutting down gracefully...')
         @request_shutdown = true
@@ -52,10 +53,12 @@ module Interferon
 
       update_alerts(@destinations, hosts, alerts, groups)
 
+      run_time = Time.new.to_f - start_time
       if @request_shutdown
         log.info("interferon #{run_desc} shut down by SIGTERM")
       else
-        log.info("interferon #{run_desc} complete")
+        statsd.gauge('run_time', run_time)
+        log.info("interferon #{run_desc} complete in %.2f seconds" % run_time)
       end
     end
 
@@ -173,7 +176,7 @@ module Interferon
           run_time,
           tags: ["destination:#{dest.class.name}"]
         )
-        log.info("#{dest.class.name} : run completed in %.2f seconds" % run_time)
+        log.info("#{dest.class.name}: run completed in %.2f seconds" % run_time)
 
         # report destination stats
         dest.report_stats
