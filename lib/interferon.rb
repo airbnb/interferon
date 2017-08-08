@@ -54,10 +54,10 @@ module Interferon
       update_alerts(@destinations, hosts, alerts, groups)
 
       run_time = Time.new.to_f - start_time
-      statsd.gauge('run_time', run_time)
       if @request_shutdown
         log.info("interferon #{run_desc} shut down by SIGTERM")
       else
+        statsd.gauge('run_time', run_time)
         log.info("interferon #{run_desc} complete in %.2f seconds" % run_time)
       end
     end
