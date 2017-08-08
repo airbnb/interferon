@@ -146,8 +146,10 @@ module Interferon
     end
 
     def update_alerts(destinations, hosts, alerts, groups)
-      alerts_queue, error_count = build_alerts_queue(hosts, alerts, groups)
-      raise 'Some alerts failed to apply or evaluate for all hosts' if @dry_run && error_count > 0
+      alerts_queue, alert_errors = build_alerts_queue(hosts, alerts, groups)
+      if @dry_run && !alert_errors.empty?
+        raise "Alerts failed to apply or evaluate for all hosts: #{alerts.map(&:to_s).join(', ')}"
+      end
 
       loader = DestinationsLoader.new([@alerts_repo_path])
       loader.get_all(destinations).each do |dest|
@@ -241,13 +243,13 @@ module Interferon
 
     def build_alerts_queue(hosts, alerts, groups)
       alerts_queue = {}
-      errors_count = 0
+      all_alert_generation_errors = []
 
       # create or update alerts; mark when we've done that
       result = Parallel.map(alerts, in_processes: @processes) do |alert|
         break if @request_shutdown
         alerts_generated = {}
-        alert_generation_error_count = 0
+        alert_generation_errors = []
         counters = {
           errors: 0,
           evals: 0,
@@ -305,7 +307,7 @@ module Interferon
             "alert #{alert}: " \
             "error #{last_eval_error}\n#{last_eval_error.backtrace.join("\n")}"
           )
-          alert_generation_error_count += 1
+          alert_generation_errors << alert
         else
           statsd.gauge('alerts.evaluate.failed_on_all', 0, tags: ["alert:#{alert}"])
         end
@@ -314,18 +316,18 @@ module Interferon
         if counters[:applies] == 0
           statsd.gauge('alerts.evaluate.never_applies', 1, tags: ["alert:#{alert}"])
           log.warn("alert #{alert} did not apply to any hosts")
-          alert_generation_error_count += 1
+          alert_generation_errors << alert
         else
           statsd.gauge('alerts.evaluate.never_applies', 0, tags: ["alert:#{alert}"])
         end
-        [alerts_generated, alert_generation_error_count]
+        [alerts_generated, alert_generation_errors]
       end
 
-      result.each do |generated_alerts, alert_generation_error_count|
+      result.each do |generated_alerts, alert_generation_errors|
         alerts_queue.merge!(generated_alerts)
-        errors_count += alert_generation_error_count
+        all_alert_generation_errors += alert_generation_errors
       end
-      [alerts_queue, errors_count]
+      [alerts_queue, all_alert_generation_errors]
     end
   end
 end
