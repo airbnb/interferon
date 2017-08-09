@@ -122,6 +122,10 @@ module Interferon
     def audit(v = nil, &block)
       get_or_set(:@audit, v, block, false)
     end
+
+    def recovery(v = nil, &block)
+      get_or_set(:@recovery, v, block, true)
+    end
   end
 
   class MetricDSL
