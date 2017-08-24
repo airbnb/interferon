@@ -5,6 +5,7 @@ require 'interferon/loaders'
 
 require 'interferon/alert'
 require 'interferon/alert_dsl'
+require 'interferon/alert_yaml'
 
 # require 'pry'  #uncomment if you're debugging
 require 'erb'
@@ -66,29 +67,49 @@ module Interferon
       alerts = []
       failed = 0
 
-      # validate that alerts path exists
-      path = File.expand_path(File.join(@alerts_repo_path, 'alerts'))
-      abort("no such directory #{path} for reading alert files") \
-        unless Dir.exist?(path)
+      alert_types = [
+        {
+          path: 'alerts',
+          extention: '*.rb',
+          class: Alert,
+        },
+        {
+          path: 'alert_definitions',
+          extention: '*.yml',
+          class: AlertYaml,
+        }
+      ]
 
-      Dir.glob(File.join(path, '*.rb')) do |alert_file|
-        break if @request_shutdown
-        begin
-          alert = Alert.new(alert_file)
-        rescue StandardError => e
-          log.warn("error reading alert file #{alert_file}: #{e}")
-          failed += 1
-        else
-          alerts << alert
+      alert_types.each do |alert_type|
+        # validate that alerts path exists
+        path = File.expand_path(File.join(@alerts_repo_path, alert_type[:path]))
+        log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
+
+        Dir.glob(File.join(path, alert_type[:extention])) do |alert_file|
+          break if @request_shutdown
+          begin
+            alert = alert_type[:class].new(alert_file)
+          rescue StandardError => e
+            log.warn("Error reading alert file #{alert_file}: #{e}")
+            failed += 1
+          else
+            alerts << alert
+          end
         end
-      end
 
-      log.info("read #{alerts.count} alerts files from #{path}")
+        log.info("Read #{alerts.count} alerts files from #{path}")
+      end
 
       statsd.gauge('alerts.read.count', alerts.count)
       statsd.gauge('alerts.read.failed', failed)
 
-      abort("failed to read #{failed} alerts") if failed > 0
+      if failed > 0
+        if @dry_run
+          abort("Failed to read #{failed} alerts")
+        else
+          log.warn("Failed to read #{failed} alerts")
+        end
+      end
       alerts
     end
 
