@@ -37,6 +37,7 @@ module Interferon::Destinations
       @dog = Dogapi::Client.new(*args)
 
       @existing_alerts = nil
+      @max_mute_minutes = options['max_mute_minutes']
       @dry_run = options['dry_run']
 
       # Datadog communication threads
@@ -275,9 +276,15 @@ EOM
           monitor_options
         )
 
-        # Unmute existing alerts that have been unsilenced.
+        # Unmute existing alerts that exceed the max silenced time
         # Datadog does not allow updates to silencing via the update_alert API call.
-        if !existing_alert['options']['silenced'].empty? && alert_options[:silenced].empty?
+        silenced = existing_alert['options']['silenced']
+        if !@max_mute_minutes.nil?
+          silenced = silenced.values.reject do |t|
+            t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
+          end
+          @dog.unmute_monitor(id) if alert_options[:silenced].empty? && silenced.empty?
+        elsif alert_options[:silenced].empty? && !silenced.empty?
           @dog.unmute_monitor(id)
         end
       else

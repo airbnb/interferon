@@ -2,6 +2,9 @@
 language: ruby
 sudo: false
 cache: bundler
+# Update bundler before proceeding
+# Travis CI uses an old version that may cause a bunch of errors
+before_install: gem install bundler
 script:
 - bundle exec rspec
 - bundle exec rubocop

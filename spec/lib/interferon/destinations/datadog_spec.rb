@@ -3,19 +3,27 @@ require 'interferon/destinations/datadog'
 
 describe Interferon::Destinations::Datadog do
   let(:retries) { 3 }
-  let(:datadog) do
-    Interferon::Destinations::Datadog.new(
+  let(:max_mute_minutes) { 60 }
+  let(:base_datadog_config) do
+    {
       'api_key' => 'TEST_API_KEY',
       'app_key' => 'TEST_APP_KEY',
-      'retries' => retries
+      'retries' => retries,
+    }
+  end
+  let(:datadog) do
+    Interferon::Destinations::Datadog.new(
+      base_datadog_config
     )
   end
   let(:datadog_dry_run) do
     Interferon::Destinations::Datadog.new(
-      'api_key' => 'TEST_API_KEY',
-      'app_key' => 'TEST_APP_KEY',
-      'retries' => retries,
-      'dry_run' => true
+      base_datadog_config.merge('dry_run' => true)
+    )
+  end
+  let(:datadog_max_mute) do
+    Interferon::Destinations::Datadog.new(
+      base_datadog_config.merge('max_mute_minutes' => max_mute_minutes)
     )
   end
   let(:mock_alert_id) { 123 }
@@ -80,12 +88,32 @@ describe Interferon::Destinations::Datadog do
       datadog.create_alert(mock_alert, mock_people)
     end
 
-    it 'calls dogapi to unmute when exiting alert is muted' do
+    it 'calls dogapi to unmute when existing alert is muted' do
       expect_any_instance_of(Dogapi::Client).to receive(:update_monitor).and_return([200, ''])
       expect_any_instance_of(Dogapi::Client).to receive(:unmute_monitor).and_return([200, ''])
       mock_response['Test Alert']['options']['silenced'] = { '*' => nil }
       expect(datadog).to receive(:existing_alerts).and_return(mock_response)
       datadog.create_alert(mock_alert, mock_people)
+    end
+
+    it 'calls dogapi to unmute when existing mute exceed max_mute_minutes' do
+      expect_any_instance_of(Dogapi::Client).to receive(:update_monitor).and_return([200, ''])
+      expect_any_instance_of(Dogapi::Client).to receive(:unmute_monitor).and_return([200, ''])
+      mock_response['Test Alert']['options']['silenced'] = {
+        '*' => Time.now.to_i + max_mute_minutes * 60 + 10,
+      }
+      expect(datadog_max_mute).to receive(:existing_alerts).and_return(mock_response)
+      datadog_max_mute.create_alert(mock_alert, mock_people)
+    end
+
+    it 'calls dogapi to keep mute when existing mute does not exceed max_mute_minutes' do
+      expect_any_instance_of(Dogapi::Client).to receive(:update_monitor).and_return([200, ''])
+      expect_any_instance_of(Dogapi::Client).not_to receive(:unmute_monitor)
+      mock_response['Test Alert']['options']['silenced'] = {
+        '*' => Time.now.to_i + max_mute_minutes * 60 - 10,
+      }
+      expect(datadog_max_mute).to receive(:existing_alerts).and_return(mock_response)
+      datadog_max_mute.create_alert(mock_alert, mock_people)
     end
 
     it 'calls validate monitor in dry-run' do
