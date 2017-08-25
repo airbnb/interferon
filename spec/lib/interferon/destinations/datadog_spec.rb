@@ -114,4 +114,37 @@ describe Interferon::Destinations::Datadog do
       datadog.remove_alert(mock_alert)
     end
   end
+
+  describe '.generate_message' do
+    let(:message) { 'test message' }
+    let(:people) { %w(userA userB) }
+
+    it 'adds the ALERT_KEY to the message' do
+      expect(Interferon::Destinations::Datadog.generate_message(message, people)).to include(
+        Interferon::Destinations::Datadog::ALERT_KEY
+      )
+    end
+
+    it 'adds a mention to people' do
+      expect(Interferon::Destinations::Datadog.generate_message(message, people)).to include(
+        *people.map { |person| "@#{person}" }
+      )
+    end
+
+    it 'does not add ^is_recovery template variable when notify_recovery is true' do
+      expect(
+        Interferon::Destinations::Datadog.generate_message(
+          message, people, notify_recovery: true
+        )
+      ).not_to include('{{^is_recovery}}')
+    end
+
+    it 'adds a ^is_recovery template variable when notify_recovery is false' do
+      expect(
+        Interferon::Destinations::Datadog.generate_message(
+          message, people, notify_recovery: false
+        )
+      ).to include('{{^is_recovery}}')
+    end
+  end
 end

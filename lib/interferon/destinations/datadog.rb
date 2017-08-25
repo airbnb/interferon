@@ -66,8 +66,15 @@ module Interferon::Destinations
       @api_errors ||= []
     end
 
-    def self.generate_message(message, people)
-      [message, ALERT_KEY, people.sort.map { |p| "@#{p}" }].flatten.join("\n")
+    def self.generate_message(message, people, options = {})
+      mentions = people.sort.map { |p| "@#{p}" }
+
+      unless options[:notify_recovery]
+        # Only mention on alert/warning
+        mentions = "{{^is_recovery}}#{mentions}{{/is_recovery}}"
+      end
+
+      [message, ALERT_KEY, mentions].flatten.join("\n")
     end
 
     def fetch_existing_alerts
@@ -132,7 +139,11 @@ module Interferon::Destinations
       # create a message which includes the notifications
       # Datadog may have a race condition where alerts created in a bad state may be triggered
       # during the dry-run creation process. Delete people from dry-run alerts to avoid this
-      message = self.class.generate_message(alert['message'], people)
+      message = self.class.generate_message(
+        alert['message'],
+        people,
+        notify_recovery: alert['notify']['recovery']
+      )
 
       # create the hash of options to send to datadog
       alert_options = {
@@ -338,7 +349,11 @@ EOM
       new_alert = {
         monitor_type: normalize_monitor_type(alert['monitor_type']),
         query: alert['metric']['datadog_query'],
-        message: generate_message(alert['message'], people).strip,
+        message: generate_message(
+          alert['message'],
+          people,
+          notify_recovery: alert['notify']['recovery']
+        ).strip,
         evaluation_delay: alert['evaluation_delay'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],
