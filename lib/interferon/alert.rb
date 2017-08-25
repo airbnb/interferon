@@ -14,6 +14,7 @@ module Interferon
     end
 
     def evaluate(hostinfo)
+      return self if @dsl && @dsl.applies == :once
       dsl = AlertDSL.new(hostinfo)
       dsl.instance_eval(@text, @filename, 1)
       @dsl = dsl
