@@ -148,7 +148,8 @@ module Interferon
     def update_alerts(destinations, hosts, alerts, groups)
       alerts_queue, alert_errors = build_alerts_queue(hosts, alerts, groups)
       if @dry_run && !alert_errors.empty?
-        raise "Alerts failed to apply or evaluate for all hosts: #{alerts.map(&:to_s).join(', ')}"
+        erroneous_alert_files = alerts_errors.map(&:to_s).join(', ')
+        raise "Alerts failed to apply or evaluate for all hosts: #{erroneous_alert_files}"
       end
 
       loader = DestinationsLoader.new([@alerts_repo_path])
