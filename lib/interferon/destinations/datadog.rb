@@ -154,6 +154,10 @@ module Interferon::Destinations
         timeout_h: alert['timeout_h'],
       }
 
+      unless alert['notify']['inlcude_tags'].nil?
+        alert_options[:include_tags] = alert['notify']['include_tags']
+      end
+
       unless alert['evaluation_delay'].nil?
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
@@ -338,6 +342,7 @@ EOM
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
+        include_tags: alert_api_json['options']['include_tags'],
         notify_no_data: alert_api_json['options']['notify_no_data'],
         notify_audit: alert_api_json['options']['notify_audit'],
         no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
@@ -355,6 +360,7 @@ EOM
           notify_recovery: alert['notify']['recovery']
         ).strip,
         evaluation_delay: alert['evaluation_delay'],
+        include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],
         no_data_timeframe: alert['no_data_timeframe'],

@@ -126,6 +126,10 @@ module Interferon
     def recovery(v = nil, &block)
       get_or_set(:@recovery, v, block, true)
     end
+
+    def include_tags(v = nil, &block)
+      get_or_set(:@include_tags, v, block, nil)
+    end
   end
 
   class MetricDSL
