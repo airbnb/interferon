@@ -29,12 +29,6 @@ module Interferon
       @dsl.name(name)
     end
 
-    def silence
-      raise 'This alert has not yet been evaluated' unless @dsl
-
-      @dsl.silenced(true)
-    end
-
     def [](attr)
       raise 'This alert has not yet been evaluated' unless @dsl
 

@@ -36,3 +36,4 @@ destinations:
       app_key: "fillmein"
       api_key: "alsomissing"
       api_timeout: 15
+      max_mute_minutes: 20160 # 14 days
