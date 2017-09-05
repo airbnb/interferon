@@ -155,7 +155,7 @@ module Interferon::Destinations
         timeout_h: alert['timeout_h'],
       }
 
-      unless alert['notify']['inlcude_tags'].nil?
+      unless alert['notify']['include_tags'].nil?
         alert_options[:include_tags] = alert['notify']['include_tags']
       end
 
