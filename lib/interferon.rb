@@ -396,7 +396,7 @@ module Interferon
       # submitting monitors to Datadog. Datadog will automatically do the conversion to 'query
       # alert' for a "complex" query that includes multiple metrics/tags while using 'metric alert'
       # for monitors that include a single scope/metric.
-      monitor_type.casecmp('query alert') ? 'metric alert' : monitor_type
+      (monitor_type || '').casecmp('query alert') ? 'metric alert' : monitor_type
     end
 
     def self.same_alerts(dest, alert_people_pair, alert_api_json)
