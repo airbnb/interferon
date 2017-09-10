@@ -290,6 +290,15 @@ module Interferon
             people += (groups[g] || [])
           end
 
+          # Convenience for alerts that select groups dynamically, since
+          # those groups may not exist. Allow configuration of one or more
+          # fallback_groups, that are static and are known to exist
+          if people.empty?
+            alert[:notify][:fallback_groups].each do |g|
+              people += (groups[g] || [])
+            end
+          end
+
           # queue the alert up for creation; we clone the alert to save the current state
           alerts_generated[alert[:name]] = [alert.clone, people]
           break if alert[:applies] == :once
