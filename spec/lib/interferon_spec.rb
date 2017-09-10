@@ -57,6 +57,39 @@ describe Interferon::Interferon do
     end
   end
 
+  context "#build_alerts_queue(hosts, alerts, groups)" do
+    let(:interferon) {Interferon::Interferon.new(nil,nil,nil,nil,true,0)}
+
+    before do
+      allow_any_instance_of(MockAlert).to receive(:evaluate)
+    end
+
+    it 'adds people to alerts when notify.groups{} is used' do
+      added = create_test_alert('name1', 'testquery3', '')
+      groups = {'a' => ['foo', 'bar']}
+      result = interferon.build_alerts_queue(['host'], [added], groups)
+      expect(result['name1'][1]).to eq(['foo', 'bar'].to_set)
+    end
+
+    context 'when notify.fallback_groups{} is used' do
+      it 'adds fallback people to alerts when no other groups are found' do
+        added = create_test_alert_with_groups_and_fallback_groups(['nonexistent_group'],['fallback_group'])
+        groups = {'fallback_group' => ['biz', 'baz']}
+        result = interferon.build_alerts_queue(['host'], [added], groups)
+        expect(result['name1'][1]).to eq(['biz', 'baz'].to_set)
+      end
+
+      it 'does not add fallback people to alerts when other groups are found' do
+        added = create_test_alert_with_groups_and_fallback_groups(['group'],['fallback_group'])
+        groups = {}
+        groups['group'] = ['foo', 'bar']
+        groups['fallback_groups'] = ['biz', 'baz']
+        result = interferon.build_alerts_queue(['host'], [added], groups)
+        expect(result['name1'][1]).to eq(['foo', 'bar'].to_set)
+      end
+    end
+  end
+
   context "dry_run_update_alerts_on_destination" do
     let(:interferon) {Interferon::Interferon.new(nil,nil,nil,nil,true,0)}
 
@@ -296,6 +329,20 @@ describe Interferon::Interferon do
     alert_dsl.thresholds(options['thresholds'])
     alert_dsl.timeout(options['timeout'])
     alert_dsl.silenced(options['silenced'])
+
+    MockAlert.new(alert_dsl)
+  end
+
+  def create_test_alert_with_groups_and_fallback_groups(groups=[], fallback_groups=[])
+    alert_dsl = AlertDSL.new({})
+
+    notify_dsl = NotifyDSL.new({})
+    notify_dsl.groups(groups)
+    notify_dsl.fallback_groups(fallback_groups)
+    alert_dsl.instance_variable_set(:@notify, notify_dsl)
+
+    alert_dsl.name('name1')
+    alert_dsl.applies(true)
 
     MockAlert.new(alert_dsl)
   end

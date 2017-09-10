@@ -3,6 +3,7 @@ We use a fork of AirBnB's Inteferon with the following modifications:
   * changed alert key
   * added support for evaluation_delay
   * alerts can be read from a multi-level directory
+  * support for fallback_groups
 
 # Interferon #
 

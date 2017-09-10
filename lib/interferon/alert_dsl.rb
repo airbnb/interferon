@@ -122,6 +122,10 @@ module Interferon
       get_or_set(:@groups, v, block, [])
     end
 
+    def fallback_groups(v=nil, &block)
+      get_or_set(:@fallback_groups, v, block, [])
+    end
+
     def audit(v = nil, &block)
       get_or_set(:@audit, v, block, true)
     end
