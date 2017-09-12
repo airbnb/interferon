@@ -7,9 +7,14 @@ include Interferon
 describe Interferon::Destinations::Datadog do
   let(:the_existing_alerts) { mock_existing_alerts }
   let(:dest) { MockDest.new(the_existing_alerts) }
+  let(:datadog) do
+    Interferon::Destinations::Datadog.new(
+      'app_key' => 'TEST_APP_KEY', 'api_key' => 'TEST_API_KEY'
+    )
+  end
 
   shared_examples_for 'alert_option' do |alert_option, same_value, different_value, alert_dsl|
-    let(:json_message) { 'message' + "\n#{Interferon::Destinations::Datadog::ALERT_KEY}" }
+    let(:json_message) { 'message' + "\n#{datadog.alert_key}" }
     let(:alert) do
       alert_dsl_path = alert_dsl.nil? ? alert_option : alert_dsl
       create_test_alert('name1', 'testquery', 'message', alert_dsl_path => same_value)
@@ -27,46 +32,46 @@ describe Interferon::Destinations::Datadog do
 
     context 'when the options are the same' do
       it 'should return true' do
-        expect(Interferon::Destinations::Datadog.same_alerts(alert, [], alert_same)).to be true
+        expect(datadog.same_alerts(alert, [], alert_same)).to be true
       end
     end
 
     context 'when the options are the different' do
       it 'should return false' do
-        expect(Interferon::Destinations::Datadog.same_alerts(alert, [], alert_diff)).to be false
+        expect(datadog.same_alerts(alert, [], alert_diff)).to be false
       end
     end
   end
 
   describe '#same_alerts' do
-    let(:json_message) { 'message' + "\n#{Interferon::Destinations::Datadog::ALERT_KEY}" }
+    let(:json_message) { 'message' + "\n#{datadog.alert_key}" }
 
     it 'detects a no change if alert message is the same' do
       alert1 = create_test_alert('name1', 'testquery', 'message')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
 
     it 'detects a change if alert message is different' do
       alert1 = create_test_alert('name1', 'testquery', 'message2')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be false
+      expect(datadog.same_alerts(alert1, [], alert2)).to be false
     end
 
     it 'detects no change if datadog query is the same' do
       alert1 = create_test_alert('name1', 'testquery', 'message')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
 
     it 'detects a change if datadog query is different' do
       alert1 = create_test_alert('name1', 'testquery1', 'message')
       alert2 = mock_alert_json('name2', 'testquery2', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be false
+      expect(datadog.same_alerts(alert1, [], alert2)).to be false
     end
 
     context 'notify_no_data option' do
@@ -87,6 +92,10 @@ describe Interferon::Destinations::Datadog do
 
     context 'evaluation_delay option' do
       it_behaves_like('alert_option', 'evaluation_delay', nil, 300)
+    end
+
+    context 'new_host_delay option' do
+      it_behaves_like('alert_option', 'new_host_delay', 400, 400)
     end
 
     context 'thresholds option' do
@@ -111,7 +120,7 @@ describe Interferon::Destinations::Datadog do
         'name2', 'testquery', json_message, 'metric alert', [1], 'silenced' => { '*' => nil }
       )
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
   end
 
@@ -191,7 +200,7 @@ describe Interferon::Destinations::Datadog do
     end
 
     it 'does not delete old alerts' do
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
@@ -207,7 +216,7 @@ describe Interferon::Destinations::Datadog do
 
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
 
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
     end
@@ -223,7 +232,7 @@ describe Interferon::Destinations::Datadog do
       added = create_test_alert('name1', 'testquery1', '')
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
 
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
     end
@@ -316,7 +325,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   def mock_existing_alerts
-    mock_message = Interferon::Destinations::Datadog::ALERT_KEY
+    mock_message = datadog.alert_key
     alert1 = mock_alert_json('name1', 'testquery1', mock_message)
     alert2 = mock_alert_json('name2', 'testquery2', mock_message)
     { 'name1' => alert1, 'name2' => alert2 }
@@ -327,6 +336,7 @@ describe Interferon::Destinations::Datadog do
 
     def initialize(the_existing_alerts)
       @existing_alerts = the_existing_alerts
+      @alert_key = ALERT_KEY
     end
 
     def create_alert(alert, _people)
@@ -338,6 +348,7 @@ describe Interferon::Destinations::Datadog do
 
   DEFAULT_OPTIONS = {
     'evaluation_delay' => nil,
+    'new_host_delay' => 300,
     'notify_audit' => false,
     'notify_no_data' => false,
     'silenced' => {},
@@ -364,7 +375,7 @@ describe Interferon::Destinations::Datadog do
     create_test_alert(
       mock_alert_json['name'],
       mock_alert_json['query'],
-      mock_alert_json['message'].sub(Interferon::Destinations::Datadog::ALERT_KEY, ''),
+      mock_alert_json['message'].sub(/#{datadog.alert_key}$/, ''),
       mock_alert_json['options']
     )
   end
@@ -388,10 +399,12 @@ describe Interferon::Destinations::Datadog do
     alert_dsl.name(name)
     alert_dsl.applies(true)
     alert_dsl.message(message)
+    alert_dsl.target('mockdest')
 
     alert_dsl.no_data_timeframe(options['no_data_timeframe'])
     alert_dsl.notify_no_data(options['notify_no_data'])
     alert_dsl.evaluation_delay(options['evaluation_delay'])
+    alert_dsl.new_host_delay(options['new_host_delay'])
     alert_dsl.require_full_window(options['require_full_window'])
     alert_dsl.thresholds(options['thresholds'])
     alert_dsl.timeout(options['timeout'])

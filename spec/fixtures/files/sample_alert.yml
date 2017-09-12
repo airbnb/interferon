@@ -1,0 +1,26 @@
+name: '%{application_name} Error Rate'
+description: 'Track NewRelic error rate for %{application_name}'
+
+scope: 'new_relic_application'
+scope_options:
+  - matches:
+      application_name: 'Sample App'
+
+target: 'newrelic'
+target_options:
+  type: 'apm_app_metric'
+  metric: 'error_percentage'
+  enabled: true
+  condition_scope: 'application'
+  terms:
+    - duration: '5'
+      operator: 'above'
+      priority: 'critical'
+      threshold: '0.1'
+      time_function: 'all'
+
+options:
+  notifiers:
+    - type: 'people'
+      args:
+        people: ['alerts@domain.com']

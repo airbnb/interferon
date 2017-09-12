@@ -99,6 +99,10 @@ module Interferon
       get_or_set(:@evaluation_delay, v, block, nil)
     end
 
+    def new_host_delay(v = nil, &block)
+      get_or_set(:@new_host_delay, v, block, 300)
+    end
+
     def require_full_window(v = nil, &block)
       get_or_set(:@require_full_window, v, block, nil)
     end
@@ -109,6 +113,10 @@ module Interferon
 
     def metric(_v = nil)
       @metric ||= MetricDSL.new(@hostinfo)
+    end
+
+    def target(v = nil, &block)
+      get_or_set(:@target, v, block, 'datadog')
     end
   end
 
