@@ -163,6 +163,10 @@ module Interferon::Destinations
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
 
+      unless alert['new_host_delay'].nil?
+        alert_options[:new_host_delay] = alert['new_host_delay']
+      end
+
       unless alert['require_full_window'].nil?
         alert_options[:require_full_window] = alert['require_full_window']
       end
@@ -349,6 +353,7 @@ EOM
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
+        new_host_delay: alert_api_json['options']['new_host_delay'],
         include_tags: alert_api_json['options']['include_tags'],
         notify_no_data: alert_api_json['options']['notify_no_data'],
         notify_audit: alert_api_json['options']['notify_audit'],
@@ -367,6 +372,7 @@ EOM
           notify_recovery: alert['notify']['recovery']
         ).strip,
         evaluation_delay: alert['evaluation_delay'],
+        new_host_delay: alert['new_host_delay'],
         include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],

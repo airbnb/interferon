@@ -89,6 +89,10 @@ describe Interferon::Destinations::Datadog do
       it_behaves_like('alert_option', 'evaluation_delay', nil, 300)
     end
 
+    context 'new_host_delay option' do
+      it_behaves_like('alert_option', 'new_host_delay', 400, 400)
+    end
+
     context 'thresholds option' do
       it_behaves_like('alert_option', 'thresholds', nil, 'critical' => 1)
     end
@@ -305,6 +309,7 @@ describe Interferon::Destinations::Datadog do
 
   DEFAULT_OPTIONS = {
     'evaluation_delay' => nil,
+    'new_host_delay' => 300,
     'notify_audit' => false,
     'notify_no_data' => false,
     'silenced' => {},
@@ -358,6 +363,7 @@ describe Interferon::Destinations::Datadog do
     alert_dsl.no_data_timeframe(options['no_data_timeframe'])
     alert_dsl.notify_no_data(options['notify_no_data'])
     alert_dsl.evaluation_delay(options['evaluation_delay'])
+    alert_dsl.new_host_delay(options['new_host_delay'])
     alert_dsl.require_full_window(options['require_full_window'])
     alert_dsl.thresholds(options['thresholds'])
     alert_dsl.timeout(options['timeout'])
