@@ -19,8 +19,6 @@ module Interferon
     include Logging
     attr_accessor :host_sources, :destinations, :host_info
 
-    DRY_RUN_ALERTS_NAME_PREFIX = '[-dry-run-]'.freeze
-
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
     # destinations is a similar hash from type => options for each alerter
@@ -221,15 +219,14 @@ module Interferon
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert_people_pair|
-        alert, _people = alert_people_pair
-        old_alerts = to_remove[alert['name']]
+      alerts_queue.each do |name, _alert_people_pair|
+        old_alert = to_remove[name]
 
-        next if old_alerts.nil?
-        if old_alerts['id'].length == 1
-          to_remove.delete(alert['name'])
+        next if old_alert.nil?
+        if old_alert['id'].length == 1
+          to_remove.delete(name)
         else
-          old_alerts['id'] = old_alerts['id'].drop(1)
+          old_alert['id'] = old_alert['id'].drop(1)
         end
       end
 
@@ -241,7 +238,7 @@ module Interferon
     end
 
     def create_alerts(dest, alerts_queue)
-      alert_key_ids = []
+      alert_keys = []
       alerts_to_create = alerts_queue.keys
       concurrency = dest.concurrency || 10
       unless @request_shutdown
@@ -252,7 +249,7 @@ module Interferon
               break if @request_shutdown
               cur_alert, people = alerts_queue[name]
               log.debug("creating alert for #{cur_alert[:name]}")
-              alert_key_ids << dest.create_alert(cur_alert, people)
+              alert_keys << dest.create_alert(cur_alert, people)
             end
           end
           t.abort_on_exception = true
@@ -260,7 +257,7 @@ module Interferon
         end
         threads.map(&:join)
       end
-      alert_key_ids
+      alert_keys
     end
 
     def build_alerts_queue(hosts, alerts, groups)
@@ -310,6 +307,7 @@ module Interferon
 
           # queue the alert up for creation; we clone the alert to save the current state
           alerts_generated[alert[:name]] = [alert.clone, people]
+          break if alert[:applies] == :once
         end
 
         # log some of the counters
@@ -335,7 +333,7 @@ module Interferon
         end
 
         # did the alert apply to any hosts?
-        if counters[:applies] == 0
+        if counters[:applies].zero?
           statsd.gauge('alerts.evaluate.never_applies', 1, tags: ["alert:#{alert}"])
           log.warn("alert #{alert} did not apply to any hosts")
           alert_generation_errors << alert

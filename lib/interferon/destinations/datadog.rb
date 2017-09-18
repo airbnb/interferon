@@ -202,9 +202,8 @@ module Interferon::Destinations
         @stats[:alerts_silenced] += 1 unless alert_options[:silenced].empty?
       end
 
-      id = resp[1].nil? ? nil : [resp[1]['id']]
       # lets key alerts by their name
-      [alert['name'], id]
+      alert['name']
     end
 
     def create_datadog_alert(alert, datadog_query, message, alert_options)
