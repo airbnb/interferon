@@ -110,6 +110,10 @@ module Interferon
     def metric(_v = nil)
       @metric ||= MetricDSL.new(@hostinfo)
     end
+
+    def target(v = nil, &block)
+      get_or_set(:@target, v, block, 'datadog')
+    end
   end
 
   class NotifyDSL
