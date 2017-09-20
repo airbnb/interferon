@@ -26,6 +26,11 @@ describe Interferon::Destinations::Datadog do
       base_datadog_config.merge('max_mute_minutes' => max_mute_minutes)
     )
   end
+  let(:datadog_alert_key) do
+    Interferon::Destinations::Datadog.new(
+      base_datadog_config.merge('alert_key' => 'My custom alert key')
+    )
+  end
   let(:mock_alert_id) { 123 }
   let(:mock_alert) do
     {
@@ -148,20 +153,26 @@ describe Interferon::Destinations::Datadog do
     let(:people) { %w(userA userB) }
 
     it 'adds the ALERT_KEY to the message' do
-      expect(Interferon::Destinations::Datadog.generate_message(message, people)).to include(
+      expect(datadog.generate_message(message, people)).to include(
         Interferon::Destinations::Datadog::ALERT_KEY
       )
     end
 
+    it 'prefers a custom alert_key if provided' do
+      expect(datadog_alert_key.generate_message(message, people)).to include(
+        'My custom alert key'
+      )
+    end
+
     it 'adds a mention to people' do
-      expect(Interferon::Destinations::Datadog.generate_message(message, people)).to include(
+      expect(datadog.generate_message(message, people)).to include(
         *people.map { |person| "@#{person}" }
       )
     end
 
     it 'does not add ^is_recovery template variable when notify_recovery is true' do
       expect(
-        Interferon::Destinations::Datadog.generate_message(
+        datadog.generate_message(
           message, people, notify_recovery: true
         )
       ).not_to include('{{^is_recovery}}')
@@ -169,7 +180,7 @@ describe Interferon::Destinations::Datadog do
 
     it 'adds a ^is_recovery template variable when notify_recovery is false' do
       expect(
-        Interferon::Destinations::Datadog.generate_message(
+        datadog.generate_message(
           message, people, notify_recovery: false
         )
       ).to include('{{^is_recovery}}')

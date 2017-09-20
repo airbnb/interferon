@@ -7,6 +7,11 @@ include Interferon
 describe Interferon::Destinations::Datadog do
   let(:the_existing_alerts) { mock_existing_alerts }
   let(:dest) { MockDest.new(the_existing_alerts) }
+  let(:datadog) do
+    Interferon::Destinations::Datadog.new(
+      'app_key' => 'TEST_APP_KEY', 'api_key' => 'TEST_API_KEY'
+    )
+  end
 
   shared_examples_for 'alert_option' do |alert_option, same_value, different_value, alert_dsl|
     let(:json_message) { 'message' + "\n#{Interferon::Destinations::Datadog::ALERT_KEY}" }
@@ -27,13 +32,13 @@ describe Interferon::Destinations::Datadog do
 
     context 'when the options are the same' do
       it 'should return true' do
-        expect(Interferon::Destinations::Datadog.same_alerts(alert, [], alert_same)).to be true
+        expect(datadog.same_alerts(alert, [], alert_same)).to be true
       end
     end
 
     context 'when the options are the different' do
       it 'should return false' do
-        expect(Interferon::Destinations::Datadog.same_alerts(alert, [], alert_diff)).to be false
+        expect(datadog.same_alerts(alert, [], alert_diff)).to be false
       end
     end
   end
@@ -45,28 +50,28 @@ describe Interferon::Destinations::Datadog do
       alert1 = create_test_alert('name1', 'testquery', 'message')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
 
     it 'detects a change if alert message is different' do
       alert1 = create_test_alert('name1', 'testquery', 'message2')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be false
+      expect(datadog.same_alerts(alert1, [], alert2)).to be false
     end
 
     it 'detects no change if datadog query is the same' do
       alert1 = create_test_alert('name1', 'testquery', 'message')
       alert2 = mock_alert_json('name2', 'testquery', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
 
     it 'detects a change if datadog query is different' do
       alert1 = create_test_alert('name1', 'testquery1', 'message')
       alert2 = mock_alert_json('name2', 'testquery2', json_message)
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be false
+      expect(datadog.same_alerts(alert1, [], alert2)).to be false
     end
 
     context 'notify_no_data option' do
@@ -115,7 +120,7 @@ describe Interferon::Destinations::Datadog do
         'name2', 'testquery', json_message, 'metric alert', [1], 'silenced' => { '*' => nil }
       )
 
-      expect(Interferon::Destinations::Datadog.same_alerts(alert1, [], alert2)).to be true
+      expect(datadog.same_alerts(alert1, [], alert2)).to be true
     end
   end
 
@@ -298,6 +303,7 @@ describe Interferon::Destinations::Datadog do
 
     def initialize(the_existing_alerts)
       @existing_alerts = the_existing_alerts
+      @alert_key = ALERT_KEY
     end
 
     def create_alert(alert, _people)
