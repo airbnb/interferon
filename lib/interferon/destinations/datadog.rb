@@ -11,6 +11,7 @@ module Interferon::Destinations
     include ::Interferon::Logging
 
     attr_accessor :concurrency
+    attr_reader :alert_key
     ALERT_KEY = 'This alert was created via the alerts framework'.freeze
 
     def initialize(options)
@@ -39,6 +40,7 @@ module Interferon::Destinations
       @existing_alerts = nil
       @max_mute_minutes = options['max_mute_minutes']
       @dry_run = options['dry_run']
+      @alert_key = options['alert_key'] || ALERT_KEY
 
       # Datadog communication threads
       @concurrency = options['concurrency'] || 10
@@ -67,7 +69,7 @@ module Interferon::Destinations
       @api_errors ||= []
     end
 
-    def self.generate_message(message, people, options = {})
+    def generate_message(message, people, options = {})
       mentions = people.sort.map { |p| "@#{p}" }
 
       unless options[:notify_recovery]
@@ -75,7 +77,7 @@ module Interferon::Destinations
         mentions = "{{^is_recovery}}#{mentions}{{/is_recovery}}"
       end
 
-      [message, ALERT_KEY, mentions].flatten.join("\n")
+      [message, alert_key, mentions].flatten.join("\n")
     end
 
     def fetch_existing_alerts
@@ -125,7 +127,7 @@ module Interferon::Destinations
 
         # count how many are manually created
         @stats[:manually_created_alerts] = \
-          @existing_alerts.reject { |_n, a| a['message'].include?(ALERT_KEY) }.length
+          @existing_alerts.reject { |_n, a| a['message'].include?(alert_key) }.length
 
         log.info(
           "datadog: found #{@existing_alerts.length} existing alerts; " \
@@ -140,7 +142,7 @@ module Interferon::Destinations
       # create a message which includes the notifications
       # Datadog may have a race condition where alerts created in a bad state may be triggered
       # during the dry-run creation process. Delete people from dry-run alerts to avoid this
-      message = self.class.generate_message(
+      message = generate_message(
         alert['message'],
         people,
         notify_recovery: alert['notify']['recovery']
@@ -307,7 +309,7 @@ EOM
     end
 
     def remove_alert(alert)
-      if alert['message'].include?(ALERT_KEY)
+      if alert['message'].include?(alert_key)
         @stats[:alerts_to_be_deleted] += 1
         log.info("deleting alert: #{alert['name']}")
 
@@ -332,7 +334,7 @@ EOM
     def need_update(alert_people_pair, existing_alerts_from_api)
       alert, people = alert_people_pair
       existing = existing_alerts_from_api[alert['name']]
-      existing.nil? || !self.class.same_alerts(alert, people, existing)
+      existing.nil? || !same_alerts(alert, people, existing)
     end
 
     def self.normalize_monitor_type(monitor_type)
@@ -347,9 +349,9 @@ EOM
       normalize_monitor_type(monitor_type_a) == normalize_monitor_type(monitor_type_b)
     end
 
-    def self.same_alerts(alert, people, alert_api_json)
+    def same_alerts(alert, people, alert_api_json)
       prev_alert = {
-        monitor_type: normalize_monitor_type(alert_api_json['type']),
+        monitor_type: self.class.normalize_monitor_type(alert_api_json['type']),
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
@@ -364,7 +366,7 @@ EOM
       }
 
       new_alert = {
-        monitor_type: normalize_monitor_type(alert['monitor_type']),
+        monitor_type: self.class.normalize_monitor_type(alert['monitor_type']),
         query: alert['metric']['datadog_query'],
         message: generate_message(
           alert['message'],
