@@ -28,9 +28,10 @@ describe Interferon::Destinations::Datadog do
   end
   let(:datadog_alert_key) do
     Interferon::Destinations::Datadog.new(
-      base_datadog_config.merge('alert_key' => 'My custom alert key')
+      base_datadog_config.merge('alert_key' => mock_custom_alert_key)
     )
   end
+  let(:mock_custom_alert_key) { 'My custom alert key' }
   let(:mock_alert_id) { 123 }
   let(:mock_alert) do
     {
@@ -160,7 +161,7 @@ describe Interferon::Destinations::Datadog do
 
     it 'prefers a custom alert_key if provided' do
       expect(datadog_alert_key.generate_message(message, people)).to include(
-        'My custom alert key'
+        mock_custom_alert_key
       )
     end
 

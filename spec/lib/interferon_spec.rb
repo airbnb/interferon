@@ -14,7 +14,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   shared_examples_for 'alert_option' do |alert_option, same_value, different_value, alert_dsl|
-    let(:json_message) { 'message' + "\n#{Interferon::Destinations::Datadog::ALERT_KEY}" }
+    let(:json_message) { 'message' + "\n#{datadog.alert_key}" }
     let(:alert) do
       alert_dsl_path = alert_dsl.nil? ? alert_option : alert_dsl
       create_test_alert('name1', 'testquery', 'message', alert_dsl_path => same_value)
@@ -44,7 +44,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   describe '#same_alerts' do
-    let(:json_message) { 'message' + "\n#{Interferon::Destinations::Datadog::ALERT_KEY}" }
+    let(:json_message) { 'message' + "\n#{datadog.alert_key}" }
 
     it 'detects a no change if alert message is the same' do
       alert1 = create_test_alert('name1', 'testquery', 'message')
@@ -292,7 +292,7 @@ describe Interferon::Destinations::Datadog do
   end
 
   def mock_existing_alerts
-    mock_message = Interferon::Destinations::Datadog::ALERT_KEY
+    mock_message = datadog.alert_key
     alert1 = mock_alert_json('name1', 'testquery1', mock_message)
     alert2 = mock_alert_json('name2', 'testquery2', mock_message)
     { 'name1' => alert1, 'name2' => alert2 }
@@ -341,7 +341,7 @@ describe Interferon::Destinations::Datadog do
     create_test_alert(
       mock_alert_json['name'],
       mock_alert_json['query'],
-      mock_alert_json['message'].sub(/#{Interferon::Destinations::Datadog::ALERT_KEY}$/, ''),
+      mock_alert_json['message'].sub(/#{datadog.alert_key}$/, ''),
       mock_alert_json['options']
     )
   end
