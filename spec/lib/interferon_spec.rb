@@ -167,7 +167,7 @@ describe Interferon::Destinations::Datadog do
     end
 
     it 'does not delete old alerts' do
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
@@ -183,7 +183,7 @@ describe Interferon::Destinations::Datadog do
 
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [], {})
 
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
     end
@@ -199,7 +199,7 @@ describe Interferon::Destinations::Datadog do
       added = create_test_alert('name1', 'testquery1', '')
       alerts_queue, _error_count = interferon.build_alerts_queue(['host'], [added], {})
 
-      expect(dest).to_not receive(:remove_alert)
+      expect(dest).to_not receive(:remove_datadog_alert)
 
       interferon.update_alerts_on_destination(dest, alerts_queue)
     end
@@ -365,6 +365,7 @@ describe Interferon::Destinations::Datadog do
     alert_dsl.name(name)
     alert_dsl.applies(true)
     alert_dsl.message(message)
+    alert_dsl.target('mockdest')
 
     alert_dsl.no_data_timeframe(options['no_data_timeframe'])
     alert_dsl.notify_no_data(options['notify_no_data'])

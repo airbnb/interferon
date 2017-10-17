@@ -313,20 +313,22 @@ EOM
         log.info("deleting alert: #{alert['name']}")
 
         # Safety to protect aginst accident dry_run deletion
-        unless @dry_run
-          alert['id'].each do |alert_id|
-            resp = @dog.delete_monitor(alert_id)
-            code = resp[0].to_i
-            log_datadog_response_code(resp, code, :deleting)
-
-            unless code >= 300 || code == -1
-              # assume this was a success
-              @stats[:alerts_deleted] += 1
-            end
-          end
-        end
+        remove_datadog_alert(alert) unless @dry_run
       else
         log.warn("not deleting manually-created alert #{alert['id']} (#{alert['name']})")
+      end
+    end
+
+    def remove_datadog_alert(alert)
+      alert['id'].each do |alert_id|
+        resp = @dog.delete_monitor(alert_id)
+        code = resp[0].to_i
+        log_datadog_response_code(resp, code, :deleting)
+
+        unless code >= 300 || code == -1
+          # assume this was a success
+          @stats[:alerts_deleted] += 1
+        end
       end
     end
 

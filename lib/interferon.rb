@@ -75,7 +75,7 @@ module Interferon
           path: 'alert_definitions',
           extention: '*.yml',
           class: AlertYaml,
-        }
+        },
       ]
 
       alert_types.each do |alert_type|
@@ -206,15 +206,14 @@ module Interferon
     end
 
     def run_update(dest, alerts_queue, existing_alerts)
-      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
-        !dest.need_update(alert_people_pair, existing_alerts)
+      dest_name = dest.class.name.split('::').last.downcase
+      updates_queue = alerts_queue.select do |_name, alert_people_pair|
+        alert, _people = alert_people_pair
+        dest_name == alert[:target] && dest.need_update(alert_people_pair, existing_alerts)
       end
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
-
-      # Do not continue to remove alerts during dry-run
-      return if @dry_run
 
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
