@@ -5,6 +5,7 @@ require 'interferon/loaders'
 
 require 'interferon/alert'
 require 'interferon/alert_dsl'
+require 'interferon/alert_yaml'
 
 # require 'pry'  #uncomment if you're debugging
 require 'erb'
@@ -17,8 +18,6 @@ module Interferon
   class Interferon
     include Logging
     attr_accessor :host_sources, :destinations, :host_info
-
-    DRY_RUN_ALERTS_NAME_PREFIX = '[-dry-run-]'.freeze
 
     # groups_sources is a hash from type => options for each group source
     # host_sources is a hash from type => options for each host source
@@ -66,29 +65,49 @@ module Interferon
       alerts = []
       failed = 0
 
-      # validate that alerts path exists
-      path = File.expand_path(File.join(@alerts_repo_path, 'alerts'))
-      abort("no such directory #{path} for reading alert files") \
-        unless Dir.exist?(path)
+      alert_types = [
+        {
+          path: 'alerts',
+          extention: '*.rb',
+          class: Alert,
+        },
+        {
+          path: 'alert_definitions',
+          extention: '*.yml',
+          class: AlertYaml,
+        },
+      ]
 
-      Dir.glob(File.join(path, '*.rb')) do |alert_file|
-        break if @request_shutdown
-        begin
-          alert = Alert.new(alert_file)
-        rescue StandardError => e
-          log.warn("error reading alert file #{alert_file}: #{e}")
-          failed += 1
-        else
-          alerts << alert
+      alert_types.each do |alert_type|
+        # validate that alerts path exists
+        path = File.expand_path(File.join(@alerts_repo_path, alert_type[:path]))
+        log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
+
+        Dir.glob(File.join(path, alert_type[:extention])) do |alert_file|
+          break if @request_shutdown
+          begin
+            alert = alert_type[:class].new(alert_file)
+          rescue StandardError => e
+            log.warn("Error reading alert file #{alert_file}: #{e}")
+            failed += 1
+          else
+            alerts << alert
+          end
         end
-      end
 
-      log.info("read #{alerts.count} alerts files from #{path}")
+        log.info("Read #{alerts.count} alerts files from #{path}")
+      end
 
       statsd.gauge('alerts.read.count', alerts.count)
       statsd.gauge('alerts.read.failed', failed)
 
-      abort("failed to read #{failed} alerts") if failed > 0
+      if failed > 0
+        if @dry_run
+          abort("Failed to read #{failed} alerts")
+        else
+          log.warn("Failed to read #{failed} alerts")
+        end
+      end
       alerts
     end
 
@@ -187,28 +206,26 @@ module Interferon
     end
 
     def run_update(dest, alerts_queue, existing_alerts)
-      updates_queue = alerts_queue.reject do |_name, alert_people_pair|
-        !dest.need_update(alert_people_pair, existing_alerts)
+      dest_name = dest.class.name.split('::').last.downcase
+      updates_queue = alerts_queue.select do |_name, alert_people_pair|
+        alert, _people = alert_people_pair
+        dest_name == alert[:target] && dest.need_update(alert_people_pair, existing_alerts)
       end
 
       # Create alerts in destination
       create_alerts(dest, updates_queue)
 
-      # Do not continue to remove alerts during dry-run
-      return if @dry_run
-
       # Existing alerts are pruned until all that remains are
       # alerts that aren't being generated anymore
       to_remove = existing_alerts.dup
-      alerts_queue.each do |_name, alert_people_pair|
-        alert, _people = alert_people_pair
-        old_alerts = to_remove[alert['name']]
+      alerts_queue.each do |name, _alert_people_pair|
+        old_alert = to_remove[name]
 
-        next if old_alerts.nil?
-        if old_alerts['id'].length == 1
-          to_remove.delete(alert['name'])
+        next if old_alert.nil?
+        if old_alert['id'].length == 1
+          to_remove.delete(name)
         else
-          old_alerts['id'] = old_alerts['id'].drop(1)
+          old_alert['id'] = old_alert['id'].drop(1)
         end
       end
 
@@ -220,7 +237,7 @@ module Interferon
     end
 
     def create_alerts(dest, alerts_queue)
-      alert_key_ids = []
+      alert_keys = []
       alerts_to_create = alerts_queue.keys
       concurrency = dest.concurrency || 10
       unless @request_shutdown
@@ -231,7 +248,7 @@ module Interferon
               break if @request_shutdown
               cur_alert, people = alerts_queue[name]
               log.debug("creating alert for #{cur_alert[:name]}")
-              alert_key_ids << dest.create_alert(cur_alert, people)
+              alert_keys << dest.create_alert(cur_alert, people)
             end
           end
           t.abort_on_exception = true
@@ -239,7 +256,7 @@ module Interferon
         end
         threads.map(&:join)
       end
-      alert_key_ids
+      alert_keys
     end
 
     def build_alerts_queue(hosts, alerts, groups)
@@ -289,6 +306,7 @@ module Interferon
 
           # queue the alert up for creation; we clone the alert to save the current state
           alerts_generated[alert[:name]] = [alert.clone, people]
+          break if alert[:applies] == :once
         end
 
         # log some of the counters
@@ -314,7 +332,7 @@ module Interferon
         end
 
         # did the alert apply to any hosts?
-        if counters[:applies] == 0
+        if counters[:applies].zero?
           statsd.gauge('alerts.evaluate.never_applies', 1, tags: ["alert:#{alert}"])
           log.warn("alert #{alert} did not apply to any hosts")
           alert_generation_errors << alert
