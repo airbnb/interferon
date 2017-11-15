@@ -5,10 +5,6 @@ require 'interferon/logging'
 
 require 'interferon/loaders'
 
-require 'interferon/alert'
-require 'interferon/alert_dsl'
-require 'interferon/alert_yaml'
-
 # require 'pry'  #uncomment if you're debugging
 require 'erb'
 require 'ostruct'
@@ -26,6 +22,7 @@ module Interferon
     # destinations is a similar hash from type => options for each alerter
     def initialize(config, dry_run = false)
       @alerts_repo_path = config['alerts_repo_path']
+      @alert_sources = config['alert_sources']
       @group_sources = config['group_sources'] || {}
       @host_sources = config['host_sources']
       @destinations = config['destinations']
@@ -43,7 +40,7 @@ module Interferon
       run_desc = @dry_run ? 'dry run' : 'run'
       log.info("beginning alerts #{run_desc}")
 
-      alerts = read_alerts
+      alerts = read_alerts(@alert_sources)
       groups = read_groups(@group_sources)
       hosts = read_hosts(@host_sources)
 
@@ -66,42 +63,22 @@ module Interferon
     def read_alerts
       alerts = []
       failed = 0
+      loader = AlertSourcesLoader.new([@alerts_repo_path])
+      loader.get_all(sources).each do |source|
+        break if @request_shutdown
+        source_results = source.list_alerts
+        source_alerts = source_results[:alerts]
+        source_failed = source_results[:failed]
 
-      alert_types = [
-        {
-          path: 'alerts',
-          extension: '*.rb',
-          class: Alert,
-        },
-        {
-          path: 'alert_definitions',
-          extension: '*.yml',
-          class: AlertYaml,
-        },
-      ]
+        alerts.concat(source_alerts)
+        failed += source_failed
 
-      alert_types.each do |alert_type|
-        # validate that alerts path exists
-        path = File.expand_path(File.join(@alerts_repo_path, alert_type[:path]))
-        log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
-
-        Dir.glob(File.join(path, alert_type[:extension])) do |alert_file|
-          break if @request_shutdown
-          begin
-            alert = alert_type[:class].new(alert_file)
-          rescue StandardError => e
-            log.warn("Error reading alert file #{alert_file}: #{e}")
-            failed += 1
-          else
-            alerts << alert
-          end
-        end
-
-        log.info("Read #{alerts.count} alerts files from #{path}")
+        statsd.gauge('alert.read.count', source_alerts.count, tags: ["source:#{source.class.name}"])
+        statsd.gauge('alerts.read.failed', source_failed, tags: ["source:#{source.class.name}"])
+        log.info("read #{source_alerts.count} alerts from source #{source.class.name}")
       end
 
-      statsd.gauge('alerts.read.count', alerts.count)
-      statsd.gauge('alerts.read.failed', failed)
+      log.info("total of #{alerts.count} alerts from #{sources.count} sources")
 
       if failed > 0
         if @dry_run
@@ -110,6 +87,7 @@ module Interferon
           log.warn("Failed to read #{failed} alerts")
         end
       end
+
       alerts
     end
 
