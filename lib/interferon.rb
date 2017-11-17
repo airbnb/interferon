@@ -3,6 +3,10 @@
 require 'interferon/version'
 require 'interferon/logging'
 
+require 'interferon/alert'
+require 'interferon/alert_dsl'
+require 'interferon/alert_yaml'
+
 require 'interferon/loaders'
 
 # require 'pry'  #uncomment if you're debugging
@@ -60,7 +64,7 @@ module Interferon
       end
     end
 
-    def read_alerts
+    def read_alerts(sources)
       alerts = []
       failed = 0
       loader = AlertSourcesLoader.new([@alerts_repo_path])

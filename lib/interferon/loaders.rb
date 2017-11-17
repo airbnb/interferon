@@ -108,10 +108,10 @@ module Interferon
     end
   end
 
-  class AlertsLoader < DynamicLoader
+  class AlertSourcesLoader < DynamicLoader
     def initialize_attributes
       @loader_for = 'alert source'
-      @type_path = 'alerts_sources'
+      @type_path = 'alert_sources'
       @module = ::Interferon::AlertSources
     end
   end
