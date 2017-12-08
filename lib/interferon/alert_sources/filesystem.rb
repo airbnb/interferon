@@ -28,7 +28,7 @@ module Interferon::AlertSources
         path = File.expand_path(alert_type['path'])
         log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
 
-        alert_class = Object.const_get("Interferon::#{alert_type['class']}")
+        alert_class = Interferon.const_get(alert_type['class'])
         Dir.glob(File.join(path, alert_type['extension'])).each do |alert_file|
           break if @request_shutdown
           begin

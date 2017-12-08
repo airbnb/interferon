@@ -46,11 +46,11 @@ describe Interferon::AlertSources::Filesystem do
     end
 
     context 'with one type (Alert)' do
-      let(:fs_source) {
-        described_class.new({
+      let(:fs_source) do
+        described_class.new(
           'alert_types' => [{ 'path' => 'alerts', 'extension' => '*.rb', 'class' => 'Alert' }]
-        })
-      }
+        )
+      end
 
       before do
         allow(Dir).to receive(:exist?).and_return(true)
@@ -75,14 +75,14 @@ describe Interferon::AlertSources::Filesystem do
     end
 
     context 'with multiple types' do
-      let(:fs_source) {
-        described_class.new({
+      let(:fs_source) do
+        described_class.new(
           'alert_types' => [
             { 'path' => 'alerts', 'extension' => '*.rb', 'class' => 'Alert' },
             { 'path' => 'alert_definitions', 'extension' => '*.yml', 'class' => 'AlertYaml' },
           ]
-        })
-      }
+        )
+      end
 
       before do
         allow(Dir).to receive(:exist?).and_return(true)
