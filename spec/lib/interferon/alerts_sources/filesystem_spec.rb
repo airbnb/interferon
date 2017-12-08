@@ -17,16 +17,18 @@ describe Interferon::AlertSources::Filesystem do
       expect { described_class.new(@options) }.to raise_error(ArgumentError)
     end
 
-    it 'requires extension in alert_types as an option' do
+    it 'set default extension in alert_types' do
       alert_types = [{ 'path' => '', 'class' => '' }]
       @options = { 'alert_types' => alert_types }
-      expect { described_class.new(@options) }.to raise_error(ArgumentError)
+      set_alert_types = described_class.new(@options).instance_variable_get(:@alert_types)
+      expect(set_alert_types[0]['extension']).to eq('*.rb')
     end
 
-    it 'requires class in alert_types as an option' do
+    it 'sets default class in alert_types' do
       alert_types = [{ 'path' => '', 'extension' => '' }]
       @options = { 'alert_types' => alert_types }
-      expect { described_class.new(@options) }.to raise_error(ArgumentError)
+      set_alert_types = described_class.new(@options).instance_variable_get(:@alert_types)
+      expect(set_alert_types[0]['class']).to eq('Alert')
     end
 
     it 'sets alert_types' do

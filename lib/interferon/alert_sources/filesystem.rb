@@ -10,10 +10,8 @@ module Interferon::AlertSources
       alert_types.each do |alert_type|
         raise ArgumentError, '"missing path for loading alerts from filesystem' \
           unless alert_type['path']
-        raise ArgumentError, 'missing extention for loading alerts from filesystem' \
-          unless alert_type['extension']
-        raise ArgumentError, 'missing class for loading alerts from filesystem' \
-          unless alert_type['class']
+        alert_type['extension'] ||= '*.rb'
+        alert_type['class'] ||= 'Alert'
       end
 
       @alert_types = alert_types
