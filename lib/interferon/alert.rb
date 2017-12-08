@@ -2,11 +2,11 @@
 
 module Interferon
   class Alert
-    def initialize(path)
-      @path = path
-      @filename = File.basename(path)
+    def initialize(alert_repo_path, alert_file_path)
+      @path = alert_file_path
+      @filename = alert_file_path.sub(/^#{File.join(alert_repo_path, '/')}/, '')
 
-      @text = File.read(@path)
+      @text = File.read(alert_file_path)
 
       @dsl = nil
     end

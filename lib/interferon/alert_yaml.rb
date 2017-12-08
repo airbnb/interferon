@@ -2,10 +2,8 @@
 
 module Interferon
   class AlertYaml < Alert
-    def initialize(path)
-      @path = path
-      @filename = File.basename(path)
-      @text = File.read(@path)
+    def initialize(alert_repo_path, alert_file_path)
+      super
 
       @data = nil
       @scope = nil

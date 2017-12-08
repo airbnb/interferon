@@ -32,7 +32,7 @@ module Interferon::AlertSources
         Dir.glob(File.join(path, alert_type['extension'])).each do |alert_file|
           break if @request_shutdown
           begin
-            alert = alert_class.new(alert_file)
+            alert = alert_class.new(path, alert_file)
           rescue StandardError => e
             log.warn("Error reading alert file #{alert_file}: #{e}")
             failed += 1

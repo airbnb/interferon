@@ -4,11 +4,12 @@ require 'spec_helper'
 require 'interferon/alert_yaml'
 
 describe Interferon::AlertYaml do
-  let(:sample_alert_yml_path) { './spec/fixtures/files/sample_alert.yml' }
+  let(:sample_alert_repo_path) { './spec/fixtures/files/' }
+  let(:sample_alert_yml_path) { File.join(sample_alert_repo_path, 'sample_alert.yml') }
   describe '#initialize' do
     it 'reads a file' do
       expect(File).to receive(:read).with(sample_alert_yml_path)
-      Interferon::AlertYaml.new(sample_alert_yml_path)
+      Interferon::AlertYaml.new(sample_alert_repo_path, sample_alert_yml_path)
     end
   end
 
@@ -16,7 +17,7 @@ describe Interferon::AlertYaml do
     let(:hostinfo) { { application_name: 'Sample Application' } }
 
     before do
-      @alert_yml = Interferon::AlertYaml.new(sample_alert_yml_path)
+      @alert_yml = Interferon::AlertYaml.new(sample_alert_repo_path, sample_alert_yml_path)
     end
 
     describe '#evaluate' do
