@@ -68,12 +68,12 @@ module Interferon
       alert_types = [
         {
           path: 'alerts',
-          extention: '*.rb',
+          extension: '*.rb',
           class: Alert,
         },
         {
           path: 'alert_definitions',
-          extention: '*.yml',
+          extension: '*.yml',
           class: AlertYaml,
         },
       ]
@@ -83,7 +83,7 @@ module Interferon
         path = File.expand_path(File.join(@alerts_repo_path, alert_type[:path]))
         log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
 
-        Dir.glob(File.join(path, alert_type[:extention])) do |alert_file|
+        Dir.glob(File.join(path, alert_type[:extension])) do |alert_file|
           break if @request_shutdown
           begin
             alert = alert_type[:class].new(alert_file)
