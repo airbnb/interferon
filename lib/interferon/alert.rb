@@ -2,10 +2,11 @@
 
 module Interferon
   class Alert
-    def initialize(alert_repo_path, alert_file_path)
+    def initialize(alert_repo_path, alert_file_path, options = {})
       @path = alert_file_path
       @filename = alert_file_path.sub(/^#{File.join(alert_repo_path, '/')}/, '')
 
+      @suffix = options[:suffix]
       @text = File.read(alert_file_path)
 
       @dsl = nil
@@ -20,6 +21,9 @@ module Interferon
       dsl = AlertDSL.new(hostinfo)
       dsl.instance_eval(@text, @filename, 1)
       @dsl = dsl
+
+      # Add suffix to name
+      change_name("#{@dsl.name} #{@suffix}") if @suffix
 
       # return the alert and not the DSL object, which is private
       self

@@ -2,7 +2,7 @@
 
 module Interferon
   class AlertYaml < Alert
-    def initialize(alert_repo_path, alert_file_path)
+    def initialize(alert_repo_path, alert_file_path, options = {})
       super
 
       @data = nil
@@ -20,6 +20,8 @@ module Interferon
       @data = YAML.safe_load(text)
       @scope = hostinfo
 
+      # Add suffixes to name
+      @data['name'] += " #{@suffix}" if @suffix
       @data['name'] += ' [Interferon]'
 
       @notify = {
