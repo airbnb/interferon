@@ -6,7 +6,16 @@
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
 
+AllCops:
+  TargetRubyVersion: 2.1
+
+Layout/IndentHeredoc:
+  Enabled: false
+
 Metrics/AbcSize:
+  Enabled: false
+
+Metrics/BlockLength:
   Enabled: false
 
 Metrics/ClassLength:
@@ -35,6 +44,25 @@ Metrics/PerceivedComplexity:
   Enabled: false
   Max: 7
 
+# Offense count: 3
+# Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
+# NamePrefix: is_, has_, have_
+# NamePrefixBlacklist: is_, has_, have_
+# NameWhitelist: is_a?
+Naming/PredicateName:
+  Enabled: false
+  NamePrefix:
+  - is_
+  - has_
+  - have_
+  NamePrefixBlacklist:
+  - is_
+  - has_
+  - have_
+
+Naming/UncommunicativeMethodParamName:
+  Enabled: false
+
 # Configuration parameters: EnforcedStyle, SupportedStyles.
 # SupportedStyles: nested, compact
 Style/ClassAndModuleChildren:
@@ -61,23 +89,16 @@ Style/FormatString:
   - sprintf
   - percent
 
-# Offense count: 3
-# Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
-# NamePrefix: is_, has_, have_
-# NamePrefixBlacklist: is_, has_, have_
-# NameWhitelist: is_a?
-Style/PredicateName:
+Style/MethodMissing:
   Enabled: false
-  NamePrefix:
-  - is_
-  - has_
-  - have_
-  NamePrefixBlacklist:
-  - is_
-  - has_
-  - have_
 
+Style/MixinUsage:
+  Enabled: false
 
-Style/TrailingCommaInLiteral:
+Style/TrailingCommaInArrayLiteral:
+  Enabled: true
+  EnforcedStyleForMultiline: consistent_comma
+
+Style/TrailingCommaInHashLiteral:
   Enabled: true
   EnforcedStyleForMultiline: consistent_comma

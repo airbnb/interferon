@@ -1,4 +1,6 @@
 
+# frozen_string_literal: true
+
 module Interferon::TestSources
   class SecondarySource
     DIR = 'loaders2'.freeze

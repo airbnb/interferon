@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class OpticaHelper
   def self.example_node_1
     {
@@ -13,7 +15,7 @@ class OpticaHelper
       'failed' => false,
       'roles' => ['role1'],
       'recipes' => ['airbnb-base', 'cookbook1'],
-      'synapse_services' => %w(service1 service2),
+      'synapse_services' => %w[service1 service2],
       'nerve_services' => [],
       'ownership' => {
         'people' => ['test_user@example.com'],
