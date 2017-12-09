@@ -3,11 +3,11 @@
 require 'interferon/version'
 require 'interferon/logging'
 
+require 'interferon/loaders'
+
 require 'interferon/alert'
 require 'interferon/alert_dsl'
 require 'interferon/alert_yaml'
-
-require 'interferon/loaders'
 
 # require 'pry'  #uncomment if you're debugging
 require 'erb'

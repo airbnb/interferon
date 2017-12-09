@@ -31,6 +31,14 @@ describe Interferon::AlertYaml do
         expect(alert['name'].end_with?('[Interferon]')).to be true
       end
 
+      it 'adds a suffix to name' do
+        suffix = 'this is a suffix string'
+        alert = Interferon::AlertYaml.new(
+          sample_alert_repo_path, sample_alert_yml_path, suffix: suffix
+        ).evaluate(hostinfo)
+        expect(alert['name'].include?(suffix)).to be true
+      end
+
       describe '#match_matcher' do
         it 'matches a positive glob' do
           hostinfo = { role: 'test-app' }
