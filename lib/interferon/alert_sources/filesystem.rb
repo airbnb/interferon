@@ -23,6 +23,7 @@ module Interferon::AlertSources
 
       @alert_types.each do |alert_type|
         # validate that alerts path exists
+        alert_type_count = 0
         path = File.expand_path(alert_type['path'])
         log.warn("No such directory #{path} for reading alert files") unless Dir.exist?(path)
 
@@ -35,11 +36,12 @@ module Interferon::AlertSources
             log.warn("Error reading alert file #{alert_file}: #{e}")
             failed += 1
           else
+            alert_type_count += 1
             alerts << alert
           end
         end
 
-        log.info("Read #{alerts.count} alerts files from #{path}")
+        log.info("Read #{alert_type_count} alerts files from #{path}")
       end
 
       { alerts: alerts, failed: failed }
