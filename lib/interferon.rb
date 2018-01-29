@@ -77,7 +77,9 @@ module Interferon
         alerts.concat(source_alerts)
         failed += source_failed
 
-        statsd.gauge('alert.read.count', source_alerts.count, tags: ["source:#{source.class.name}"])
+        statsd.gauge(
+          'alerts.read.count', source_alerts.count, tags: ["source:#{source.class.name}"]
+        )
         statsd.gauge('alerts.read.failed', source_failed, tags: ["source:#{source.class.name}"])
         log.info("read #{source_alerts.count} alerts from source #{source.class.name}")
       end
