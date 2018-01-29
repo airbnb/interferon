@@ -107,6 +107,19 @@ describe Interferon::Destinations::Datadog do
       it_behaves_like('alert_option', 'thresholds', { 'critical' => 2 }, 'critical' => 1)
     end
 
+    context 'thresholds option with symbols' do
+      it 'converts symbols in thresholds hash keys to strings' do
+        alert = create_test_alert(
+          'name1', 'testquery', 'message', 'thresholds' => { critical: 1 }
+        )
+        alert_same = mock_alert_json(
+          'name2', 'testquery', json_message, 'metric alert',
+          [1], 'thresholds' => { 'critical' => 1 }
+        )
+        expect(datadog.same_alerts(alert, [], alert_same)).to be true
+      end
+    end
+
     context 'timeout_h option' do
       it_behaves_like('alert_option', 'timeout_h', nil, 3600)
     end
