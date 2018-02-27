@@ -140,6 +140,14 @@ module Interferon
     def include_tags(v = nil, &block)
       get_or_set(:@include_tags, v, block, nil)
     end
+
+    def renotify_interval(v = nil, &block)
+      get_or_set(:@renotify_interval, v, block, nil)
+    end
+
+    def escalation_message(v = nil, &block)
+      get_or_set(:@escalation_message, v, block, nil)
+    end
   end
 
   class MetricDSL

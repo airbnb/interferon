@@ -159,6 +159,14 @@ module Interferon::Destinations
         alert_options[:include_tags] = alert['notify']['include_tags']
       end
 
+      unless alert['notify']['renotify_interval'].nil?
+        alert_options[:renotify_interval] = alert['notify']['renotify_interval']
+      end
+
+      unless alert['notify']['escalation_message'].nil?
+        alert_options[:escalation_message] = alert['notify']['escalation_message']
+      end
+
       unless alert['evaluation_delay'].nil?
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
@@ -349,12 +357,14 @@ Options:
         monitor_type: self.class.normalize_monitor_type(alert_api_json['type']),
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
+        escalation_message: alert_api_json['options']['escalation_message'],
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
         new_host_delay: alert_api_json['options']['new_host_delay'],
         include_tags: alert_api_json['options']['include_tags'],
         notify_no_data: alert_api_json['options']['notify_no_data'],
         notify_audit: alert_api_json['options']['notify_audit'],
         no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
+        renotify_interval: alert_api_json['options']['renotify_interval'],
         silenced: alert_api_json['options']['silenced'],
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
@@ -369,11 +379,13 @@ Options:
           notify_recovery: alert['notify']['recovery']
         ).strip,
         evaluation_delay: alert['evaluation_delay'],
+        escalation_message: alert['notify']['escalation_message'],
         new_host_delay: alert['new_host_delay'],
         include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],
         no_data_timeframe: alert['no_data_timeframe'],
+        renotify_interval: alert['notify']['renotify_interval'],
         silenced: alert['silenced'],
         thresholds: alert['thresholds'],
         timeout_h: alert['timeout_h'],

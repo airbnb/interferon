@@ -112,6 +112,14 @@ describe Interferon::Destinations::Datadog do
       it_behaves_like('alert_option', 'include_tags', true, false, 'notify' => 'include_tags')
     end
 
+    context 'renotify_interval option' do
+      it_behaves_like('alert_option', 'renotify_interval', nil, 30, 'notify' => 'renotify_interval')
+    end
+
+    context 'escalation_message option' do
+      it_behaves_like('alert_option', 'escalation_message', nil, "", 'notify' => 'escalation_message')
+    end
+
     context 'notify_audit option' do
       it_behaves_like('alert_option', 'notify_audit', true, false, 'notify' => 'audit')
     end
