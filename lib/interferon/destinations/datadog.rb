@@ -378,8 +378,8 @@ Options:
           people,
           notify_recovery: alert['notify']['recovery']
         ).strip,
-        evaluation_delay: alert['evaluation_delay'],
         escalation_message: alert['notify']['escalation_message'],
+        evaluation_delay: alert['evaluation_delay'],
         new_host_delay: alert['new_host_delay'],
         include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
