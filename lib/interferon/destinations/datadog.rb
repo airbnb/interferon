@@ -202,14 +202,14 @@ module Interferon::Destinations
 
     def create_datadog_alert(alert, datadog_query, message, alert_options)
       @stats[:alerts_to_be_created] += 1
-      new_alert_text = <<-EOM
-Query:
-#{datadog_query}
-Message:
-#{message}
-Options:
-#{alert_options}
-EOM
+      new_alert_text = <<~MESSAGE
+        Query:
+        #{datadog_query}
+        Message:
+        #{message}
+        Options:
+        #{alert_options}
+MESSAGE
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
       monitor_options = {
@@ -237,22 +237,22 @@ EOM
       @stats[:alerts_to_be_updated] += 1
       id = existing_alert['id'][0]
 
-      new_alert_text = <<-EOM.strip
-Query:
-#{datadog_query.strip}
-Message:
-#{message.strip}
-Options:
-#{alert_options}
-EOM
-      existing_alert_text = <<-EOM.strip
-Query:
-#{existing_alert['query'].strip}
-Message:
-#{existing_alert['message'].strip}
-Options:
-#{alert_options}
-EOM
+      new_alert_text = <<~MESSAGE.strip
+        Query:
+        #{datadog_query.strip}
+        Message:
+        #{message.strip}
+        Options:
+        #{alert_options}
+MESSAGE
+      existing_alert_text = <<~MESSAGE.strip
+        Query:
+        #{existing_alert['query'].strip}
+        Message:
+        #{existing_alert['message'].strip}
+        Options:
+        #{alert_options}
+MESSAGE
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 

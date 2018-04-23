@@ -94,12 +94,6 @@ Metrics/BlockLength:
 Style/FormatStringToken:
   Enabled: false
 
-Layout/IndentHeredoc:
-  Enabled: false
-
-Naming/HeredocDelimiterNaming:
-  Enabled: false
-
 Style/MultilineIfModifier:
   Enabled: false
 
