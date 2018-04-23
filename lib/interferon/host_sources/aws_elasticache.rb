@@ -7,8 +7,10 @@ module Interferon::HostSources
     def initialize(options)
       missing = %w[access_key_id secret_access_key].reject { |r| options.key?(r) }
 
-      AWS.config(access_key_id: options['access_key_id'],
-                 secret_access_key: options['secret_access_key']) if missing.empty?
+      if missing.empty?
+        AWS.config(access_key_id: options['access_key_id'],
+                   secret_access_key: options['secret_access_key'])
+      end
 
       # initialize a list of regions to check
       @regions = if options['regions'] && !options['regions'].empty?
