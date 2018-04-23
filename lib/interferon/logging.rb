@@ -12,7 +12,7 @@ module Interferon
     end
 
     def log
-      @logger ||= Logging.configure_logger_for(self.class.name)
+      @log ||= Logging.configure_logger_for(self.class.name)
     end
 
     def self.configure_logger_for(classname)

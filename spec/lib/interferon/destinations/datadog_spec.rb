@@ -43,7 +43,7 @@ describe Interferon::Destinations::Datadog do
       'notify' => {},
     }
   end
-  let(:mock_people) { %w(foo bar baz) }
+  let(:mock_people) { %w[foo bar baz] }
   let(:mock_response) do
     {
       'Test Alert' => {
@@ -151,7 +151,7 @@ describe Interferon::Destinations::Datadog do
 
   describe '.generate_message' do
     let(:message) { 'test message' }
-    let(:people) { %w(userA userB) }
+    let(:people) { %w[userA userB] }
 
     it 'adds the ALERT_KEY to the message' do
       expect(datadog.generate_message(message, people)).to include(

@@ -13,7 +13,7 @@ module Interferon::Destinations
     ALERT_KEY = 'This alert was created via the alerts framework'.freeze
 
     def initialize(options)
-      %w(app_key api_key).each do |req|
+      %w[app_key api_key].each do |req|
         unless options[req]
           raise ArgumentError, "missing required argument #{req}"
         end
