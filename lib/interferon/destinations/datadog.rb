@@ -14,9 +14,7 @@ module Interferon::Destinations
 
     def initialize(options)
       %w[app_key api_key].each do |req|
-        unless options[req]
-          raise ArgumentError, "missing required argument #{req}"
-        end
+        raise ArgumentError, "missing required argument #{req}" unless options[req]
       end
 
       # Set dogapi timeout explicitly
@@ -163,17 +161,13 @@ module Interferon::Destinations
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
 
-      unless alert['new_host_delay'].nil?
-        alert_options[:new_host_delay] = alert['new_host_delay']
-      end
+      alert_options[:new_host_delay] = alert['new_host_delay'] unless alert['new_host_delay'].nil?
 
       unless alert['require_full_window'].nil?
         alert_options[:require_full_window] = alert['require_full_window']
       end
 
-      unless alert['thresholds'].nil?
-        alert_options[:thresholds] = alert['thresholds']
-      end
+      alert_options[:thresholds] = alert['thresholds'] unless alert['thresholds'].nil?
 
       datadog_query = alert['metric']['datadog_query']
       existing_alert = existing_alerts[alert['name']]
@@ -410,9 +404,7 @@ EOM
 
     def log_datadog_response_code(resp, code, action, alert = nil)
       # log whenever we've encountered errors
-      if code != 200 && !alert.nil?
-        api_errors << "#{code} on alert #{alert['name']}"
-      end
+      api_errors << "#{code} on alert #{alert['name']}" if code != 200 && !alert.nil?
 
       # client error
       if code == 400
