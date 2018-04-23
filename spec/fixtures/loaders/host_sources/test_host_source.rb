@@ -2,6 +2,6 @@
 
 module ::Interferon::HostSources
   class TestHostSource
-    DIR = 'loaders'
+    DIR = 'loaders'.freeze
   end
 end

@@ -12,7 +12,7 @@ module Interferon::Destinations
 
     attr_accessor :concurrency
     attr_reader :alert_key
-    ALERT_KEY = 'This alert was created via the alerts framework'
+    ALERT_KEY = 'This alert was created via the alerts framework'.freeze
 
     def initialize(options)
       %w[app_key api_key].each do |req|
@@ -202,13 +202,13 @@ module Interferon::Destinations
 
     def create_datadog_alert(alert, datadog_query, message, alert_options)
       @stats[:alerts_to_be_created] += 1
-      new_alert_text = <<~MESSAGE
-        Query:
-        #{datadog_query}
-        Message:
-        #{message}
-        Options:
-        #{alert_options}
+      new_alert_text = <<-MESSAGE
+Query:
+#{datadog_query}
+Message:
+#{message}
+Options:
+#{alert_options}
 MESSAGE
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
@@ -237,21 +237,21 @@ MESSAGE
       @stats[:alerts_to_be_updated] += 1
       id = existing_alert['id'][0]
 
-      new_alert_text = <<~MESSAGE.strip
-        Query:
-        #{datadog_query.strip}
-        Message:
-        #{message.strip}
-        Options:
-        #{alert_options}
+      new_alert_text = <<-MESSAGE.strip
+Query:
+#{datadog_query.strip}
+Message:
+#{message.strip}
+Options:
+#{alert_options}
 MESSAGE
-      existing_alert_text = <<~MESSAGE.strip
-        Query:
-        #{existing_alert['query'].strip}
-        Message:
-        #{existing_alert['message'].strip}
-        Options:
-        #{alert_options}
+      existing_alert_text = <<-MESSAGE.strip
+Query:
+#{existing_alert['query'].strip}
+Message:
+#{existing_alert['message'].strip}
+Options:
+#{alert_options}
 MESSAGE
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
