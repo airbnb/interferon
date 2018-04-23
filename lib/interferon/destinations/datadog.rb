@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'diffy'
 require 'dogapi'
 require 'parallel'
@@ -10,7 +12,7 @@ module Interferon::Destinations
 
     attr_accessor :concurrency
     attr_reader :alert_key
-    ALERT_KEY = 'This alert was created via the alerts framework'.freeze
+    ALERT_KEY = 'This alert was created via the alerts framework'
 
     def initialize(options)
       %w[app_key api_key].each do |req|

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Interferon
   class MockAlert < Alert
     def initialize(dsl)
