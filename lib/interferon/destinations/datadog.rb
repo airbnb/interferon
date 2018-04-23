@@ -2,8 +2,6 @@ require 'diffy'
 require 'dogapi'
 require 'parallel'
 require 'set'
-require 'thread'
-
 Diffy::Diff.default_format = :text
 
 module Interferon::Destinations

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'interferon/version'
 require 'interferon/logging'
 
@@ -101,7 +103,7 @@ module Interferon
       statsd.gauge('alerts.read.count', alerts.count)
       statsd.gauge('alerts.read.failed', failed)
 
-      if failed > 0
+      if failed.positive?
         if @dry_run
           abort("Failed to read #{failed} alerts")
         else
@@ -313,7 +315,7 @@ module Interferon
         statsd.gauge('alerts.evaluate.errors', counters[:errors], tags: ["alert:#{alert}"])
         statsd.gauge('alerts.evaluate.applies', counters[:applies], tags: ["alert:#{alert}"])
 
-        if counters[:applies] > 0
+        if counters[:applies].positive?
           log.info("alert #{alert} applies to #{counters[:applies]} of #{counters[:hosts]} hosts")
         end
 
