@@ -106,8 +106,8 @@ Naming/HeredocDelimiterNaming:
 Style/IfUnlessModifier:
   Enabled: false
 
-Style/PercentLiteralDelimiters:
+Style/MultilineIfModifier:
   Enabled: false
 
-Style/MultilineIfModifier:
+Style/MethodMissing:
   Enabled: false

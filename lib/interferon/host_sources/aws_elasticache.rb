@@ -3,7 +3,7 @@ require 'aws'
 module Interferon::HostSources
   class AwsElasticache
     def initialize(options)
-      missing = %w(access_key_id secret_access_key).reject { |r| options.key?(r) }
+      missing = %w[access_key_id secret_access_key].reject { |r| options.key?(r) }
 
       AWS.config(access_key_id: options['access_key_id'],
                  secret_access_key: options['secret_access_key']) if missing.empty?
