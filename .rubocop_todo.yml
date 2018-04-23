@@ -91,9 +91,6 @@ Naming/UncommunicativeMethodParamName:
 Metrics/BlockLength:
   Enabled: false
 
-Style/FrozenStringLiteralComment:
-  Enabled: false
-
 Style/FormatStringToken:
   Enabled: false
 

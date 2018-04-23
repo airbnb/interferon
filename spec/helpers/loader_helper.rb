@@ -1,4 +1,6 @@
 
+# frozen_string_literal: true
+
 ### some helpers to make this work ###
 # define the module we're working in
 module ::Interferon::TestSources; end

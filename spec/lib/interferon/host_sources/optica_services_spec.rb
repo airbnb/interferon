@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'helpers/optica_helper'
 require 'interferon/host_sources/optica_services'

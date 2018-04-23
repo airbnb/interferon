@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 module Interferon::TestSources
   class TestSource
-    DIR = 'loaders2'.freeze
+    DIR = 'loaders2'
 
     attr_accessor :testval
     def initialize(options)

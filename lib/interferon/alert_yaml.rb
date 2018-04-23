@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Interferon
   class AlertYaml < Alert
     def initialize(path)

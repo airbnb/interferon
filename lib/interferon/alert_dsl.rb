@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'interferon/work_hours_helper'
 
 module Interferon

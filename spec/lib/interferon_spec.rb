@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'helpers/mock_alert'
 require 'interferon/destinations/datadog'

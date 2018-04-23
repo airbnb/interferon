@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class OpticaHelper
   def self.example_node_1
     {

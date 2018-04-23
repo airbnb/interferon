@@ -1,4 +1,6 @@
 
+# frozen_string_literal: true
+
 module Interferon
   # lets create namespaces for things we'll be loading
   module Destinations; end
