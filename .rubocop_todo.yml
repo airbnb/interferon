@@ -94,8 +94,5 @@ Metrics/BlockLength:
 Style/FormatStringToken:
   Enabled: false
 
-Style/MultilineIfModifier:
-  Enabled: false
-
 Style/MethodMissing:
   Enabled: false
