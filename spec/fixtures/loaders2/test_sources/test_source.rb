@@ -2,7 +2,7 @@
 
 module Interferon::TestSources
   class TestSource
-    DIR = 'loaders2'
+    DIR = 'loaders2'.freeze
 
     attr_accessor :testval
     def initialize(options)

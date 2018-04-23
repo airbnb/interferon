@@ -6,7 +6,7 @@ module Interferon
   class WorkHoursHelper
     DEFAULT_WORK_DAYS = (1..5)
     DEFAULT_WORK_HOURS = (9..16)
-    DEFAULT_WORK_TIMEZONE = 'America/Los_Angeles'
+    DEFAULT_WORK_TIMEZONE = 'America/Los_Angeles'.freeze
     DEFAULT_WORK_ARGS = {
       hours: DEFAULT_WORK_HOURS,
       days: DEFAULT_WORK_DAYS,
