@@ -9,6 +9,9 @@
 Metrics/AbcSize:
   Enabled: false
 
+Metrics/BlockLength:
+  Enabled: false
+
 Metrics/ClassLength:
   Enabled: false
 
@@ -34,6 +37,25 @@ Metrics/ParameterLists:
 Metrics/PerceivedComplexity:
   Enabled: false
   Max: 7
+
+# Offense count: 3
+# Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
+# NamePrefix: is_, has_, have_
+# NamePrefixBlacklist: is_, has_, have_
+# NameWhitelist: is_a?
+Naming/PredicateName:
+  Enabled: false
+  NamePrefix:
+  - is_
+  - has_
+  - have_
+  NamePrefixBlacklist:
+  - is_
+  - has_
+  - have_
+
+Naming/UncommunicativeMethodParamName:
+  Enabled: false
 
 # Configuration parameters: EnforcedStyle, SupportedStyles.
 # SupportedStyles: nested, compact
@@ -61,21 +83,11 @@ Style/FormatString:
   - sprintf
   - percent
 
-# Offense count: 3
-# Configuration parameters: NamePrefix, NamePrefixBlacklist, NameWhitelist.
-# NamePrefix: is_, has_, have_
-# NamePrefixBlacklist: is_, has_, have_
-# NameWhitelist: is_a?
-Naming/PredicateName:
+Style/MethodMissing:
   Enabled: false
-  NamePrefix:
-  - is_
-  - has_
-  - have_
-  NamePrefixBlacklist:
-  - is_
-  - has_
-  - have_
+
+Style/MixinUsage:
+  Enabled: false
 
 Style/TrailingCommaInArrayLiteral:
   Enabled: true
@@ -84,15 +96,3 @@ Style/TrailingCommaInArrayLiteral:
 Style/TrailingCommaInHashLiteral:
   Enabled: true
   EnforcedStyleForMultiline: consistent_comma
-
-Naming/UncommunicativeMethodParamName:
-  Enabled: false
-
-Metrics/BlockLength:
-  Enabled: false
-
-Style/FormatStringToken:
-  Enabled: false
-
-Style/MethodMissing:
-  Enabled: false
