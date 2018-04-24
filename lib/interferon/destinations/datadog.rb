@@ -1,9 +1,9 @@
+# frozen_string_literal: true
+
 require 'diffy'
 require 'dogapi'
 require 'parallel'
 require 'set'
-require 'thread'
-
 Diffy::Diff.default_format = :text
 
 module Interferon::Destinations
@@ -15,10 +15,8 @@ module Interferon::Destinations
     ALERT_KEY = 'This alert was created via the alerts framework'.freeze
 
     def initialize(options)
-      %w(app_key api_key).each do |req|
-        unless options[req]
-          raise ArgumentError, "missing required argument #{req}"
-        end
+      %w[app_key api_key].each do |req|
+        raise ArgumentError, "missing required argument #{req}" unless options[req]
       end
 
       # Set dogapi timeout explicitly
@@ -165,17 +163,13 @@ module Interferon::Destinations
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
 
-      unless alert['new_host_delay'].nil?
-        alert_options[:new_host_delay] = alert['new_host_delay']
-      end
+      alert_options[:new_host_delay] = alert['new_host_delay'] unless alert['new_host_delay'].nil?
 
       unless alert['require_full_window'].nil?
         alert_options[:require_full_window] = alert['require_full_window']
       end
 
-      unless alert['thresholds'].nil?
-        alert_options[:thresholds] = alert['thresholds']
-      end
+      alert_options[:thresholds] = alert['thresholds'] unless alert['thresholds'].nil?
 
       datadog_query = alert['metric']['datadog_query']
       existing_alert = existing_alerts[alert['name']]
@@ -208,14 +202,14 @@ module Interferon::Destinations
 
     def create_datadog_alert(alert, datadog_query, message, alert_options)
       @stats[:alerts_to_be_created] += 1
-      new_alert_text = <<-EOM
+      new_alert_text = <<-MESSAGE
 Query:
 #{datadog_query}
 Message:
 #{message}
 Options:
 #{alert_options}
-EOM
+MESSAGE
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
       monitor_options = {
@@ -243,22 +237,22 @@ EOM
       @stats[:alerts_to_be_updated] += 1
       id = existing_alert['id'][0]
 
-      new_alert_text = <<-EOM.strip
+      new_alert_text = <<-MESSAGE.strip
 Query:
 #{datadog_query.strip}
 Message:
 #{message.strip}
 Options:
 #{alert_options}
-EOM
-      existing_alert_text = <<-EOM.strip
+MESSAGE
+      existing_alert_text = <<-MESSAGE.strip
 Query:
 #{existing_alert['query'].strip}
 Message:
 #{existing_alert['message'].strip}
 Options:
 #{alert_options}
-EOM
+MESSAGE
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 
@@ -399,7 +393,9 @@ EOM
       end
 
       log.info(
-        'datadog: successfully created (%d/%d), updated (%d/%d), and deleted (%d/%d) alerts' % [
+        'datadog: successfully created (%<alerts_created>d/%<alerts_to_be_created>d),' \
+        'updated (%<alerts_updated>d/%<alerts_to_be_updated>d),' \
+        'and deleted (%<alerts_deleted>d/%<alerts_to_be_deleted>d) alerts' % [
           @stats[:alerts_created],
           @stats[:alerts_to_be_created],
           @stats[:alerts_updated],
@@ -412,9 +408,7 @@ EOM
 
     def log_datadog_response_code(resp, code, action, alert = nil)
       # log whenever we've encountered errors
-      if code != 200 && !alert.nil?
-        api_errors << "#{code} on alert #{alert['name']}"
-      end
+      api_errors << "#{code} on alert #{alert['name']}" if code != 200 && !alert.nil?
 
       # client error
       if code == 400

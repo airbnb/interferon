@@ -1,7 +1,8 @@
-include ::Interferon::Logging
+# frozen_string_literal: true
 
 module Interferon::GroupSources
   class Filesystem
+    include ::Interferon::Logging
     def initialize(options)
       raise ArgumentError, 'missing paths for loading groups from filesystem' \
         unless options['paths']

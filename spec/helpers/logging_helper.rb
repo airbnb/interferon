@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 # disable logging during spec runs
 module Interferon::Logging
   class EmptyLogger < StringIO

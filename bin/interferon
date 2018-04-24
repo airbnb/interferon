@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'yaml'
 require 'optparse'
@@ -46,7 +47,7 @@ end
 
 # validate that required options are present
 config = parseconfig(options[:config])
-%w(alerts_repo_path host_sources destinations).each do |req|
+%w[alerts_repo_path host_sources destinations].each do |req|
   unless config.include?(req) && !config[req].empty?
     puts "config file has no #{req} defined; exiting"
     exit 2

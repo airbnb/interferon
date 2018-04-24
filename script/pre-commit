@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'json'
 require 'yaml'
@@ -17,7 +18,7 @@ added_files = files
               .compact
 
 modified_files = files
-                 .select { |(status, _name)| status != 'D' } # ignore deleted files
+                 .reject { |(status, _name)| status == 'D' } # ignore deleted files
                  .map { |(_status, name)| name }
                  .compact
 

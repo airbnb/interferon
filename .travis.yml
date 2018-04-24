@@ -9,7 +9,6 @@ script:
 - bundle exec rspec
 - bundle exec rubocop
 rvm:
-  - 1.9.3
   - 2.1.10
   - 2.2.6
   - 2.3.3
