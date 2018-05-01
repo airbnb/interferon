@@ -153,6 +153,7 @@ module Interferon::Destinations
         no_data_timeframe: alert['no_data_timeframe'],
         silenced: alert['silenced'],
         timeout_h: alert['timeout_h'],
+        locked: alert['locked'],
       }
 
       unless alert['notify']['include_tags'].nil?
@@ -356,6 +357,7 @@ EOM
         silenced: alert_api_json['options']['silenced'],
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
+        locked: alert_api_json['options']['locked'],
       }
 
       new_alert = {
@@ -374,6 +376,7 @@ EOM
         silenced: alert['silenced'],
         thresholds: alert['thresholds'],
         timeout_h: alert['timeout_h'],
+        locked: alert['locked'],
       }
 
       unless alert['require_full_window'].nil?

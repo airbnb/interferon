@@ -33,6 +33,10 @@ module Interferon
   class AlertDSL
     include DSLMixin
 
+    def locked(v = nil, &block)
+      get_or_set(:@locked, v, block, false)
+    end
+
     def name(v = nil, &block)
       get_or_set(:@name, v, block, '', &:strip)
     end
