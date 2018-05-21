@@ -14,7 +14,7 @@ module Interferon
     }.freeze
 
     def self.is_work_hour?(time, args = {})
-      args = args.merge(DEFAULT_WORK_ARGS)
+      args = DEFAULT_WORK_ARGS.merge(args)
       tz = TZInfo::Timezone.get args[:timezone]
       time_in_tz = time + tz.period_for_utc(time).utc_offset
       args[:days].include?(time_in_tz.wday) && args[:hours].include?(time_in_tz.hour)

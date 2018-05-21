@@ -51,5 +51,16 @@ describe Interferon::WorkHoursHelper do
         ).to be_falsy
       end
     end
+
+    context 'when custom arguments are provided' do
+      it 'respects them' do
+        expect(
+          subject.is_work_hour?(
+            Time.parse('Mon Nov 26 9:01:20 PST 2001').utc,
+            days: (3..5)
+          )
+        ).to be_falsy
+      end
+    end
   end
 end
