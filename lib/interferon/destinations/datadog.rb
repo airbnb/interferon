@@ -209,7 +209,7 @@ Message:
 #{message}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
       monitor_options = {
@@ -244,7 +244,7 @@ Message:
 #{message.strip}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       existing_alert_text = <<-MESSAGE.strip
 Query:
 #{existing_alert['query'].strip}
@@ -252,7 +252,7 @@ Message:
 #{existing_alert['message'].strip}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 
