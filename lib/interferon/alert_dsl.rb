@@ -48,7 +48,7 @@ module Interferon
     end
 
     def applies(v = nil, &block)
-      get_or_set(:@applies, v, block, false)
+      get_or_set(:@applies, v, block, false) { |val| val == :once ? val : !!val }
     end
 
     def silenced(v = nil, &block)
