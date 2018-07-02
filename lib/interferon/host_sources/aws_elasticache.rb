@@ -50,9 +50,9 @@ module Interferon::HostSources
                 cluster_status: cluster[:cache_cluster_status],
                 node_type: cluster[:cache_node_type],
                 peer_nodes: cluster[:num_cache_nodes],
+                replication_group_id: cluster[:replication_group_id],
 
                 node_status: node[:cache_node_status],
-                replication_group_id: node[:replication_group_id],
 
                 # elasticache does not support tagging
                 owners: [],
