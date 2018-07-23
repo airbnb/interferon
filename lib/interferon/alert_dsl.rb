@@ -132,6 +132,10 @@ module Interferon
     def target(v = nil, &block)
       get_or_set(:@target, v, block, 'datadog')
     end
+
+    def tags(v = nil, &block)
+      get_or_set(:@tags, v, block, [])
+    end
   end
 
   class NotifyDSL
