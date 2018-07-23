@@ -172,17 +172,22 @@ module Interferon::Destinations
 
       alert_options[:thresholds] = alert['thresholds'] unless alert['thresholds'].nil?
 
+      tags = []
+      unless alert['tags'].nil?
+        tags = alert['tags']
+      end
+
       datadog_query = alert['metric']['datadog_query']
       existing_alert = existing_alerts[alert['name']]
 
       # new alert, create it
       if existing_alert.nil?
         action = :creating
-        resp = create_datadog_alert(alert, datadog_query, message, alert_options)
+        resp = create_datadog_alert(alert, datadog_query, message, alert_options, tags)
       else
         # existing alert, modify it
         action = :updating
-        resp = update_datadog_alert(alert, datadog_query, message, alert_options, existing_alert)
+        resp = update_datadog_alert(alert, datadog_query, message, alert_options, tags, existing_alert)
       end
 
       # log whenever we've encountered errors
@@ -201,13 +206,15 @@ module Interferon::Destinations
       alert['name']
     end
 
-    def create_datadog_alert(alert, datadog_query, message, alert_options)
+    def create_datadog_alert(alert, datadog_query, message, alert_options, tags)
       @stats[:alerts_to_be_created] += 1
       new_alert_text = <<-MESSAGE
 Query:
 #{datadog_query}
 Message:
 #{message}
+Tags:
+#{tags.join(',')}
 Options:
 #{alert_options}
 MESSAGE
@@ -216,6 +223,7 @@ MESSAGE
       monitor_options = {
         name: alert['name'],
         message: message,
+        tags: tags,
         options: alert_options,
       }
 
@@ -234,7 +242,7 @@ MESSAGE
       end
     end
 
-    def update_datadog_alert(alert, datadog_query, message, alert_options, existing_alert)
+    def update_datadog_alert(alert, datadog_query, message, alert_options, tags, existing_alert)
       @stats[:alerts_to_be_updated] += 1
       id = existing_alert['id'][0]
 
@@ -243,6 +251,8 @@ Query:
 #{datadog_query.strip}
 Message:
 #{message.strip}
+Tags:
+#{tags.join(',')}
 Options:
 #{alert_options}
 MESSAGE
@@ -251,6 +261,8 @@ Query:
 #{existing_alert['query'].strip}
 Message:
 #{existing_alert['message'].strip}
+Tags:
+#{existing_alert['tags'].join(',')}
 Options:
 #{alert_options}
 MESSAGE
@@ -260,6 +272,7 @@ MESSAGE
       monitor_options = {
         name: alert['name'],
         message: message,
+        tags: tags,
         options: alert_options,
       }
 
@@ -360,6 +373,7 @@ MESSAGE
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
         locked: alert_api_json['options']['locked'],
+        tags: alert_api_json['tags'],
       }
 
       new_alert = {
@@ -380,6 +394,7 @@ MESSAGE
         thresholds: alert['thresholds'],
         timeout_h: alert['timeout_h'],
         locked: alert['locked'],
+        tags: alert['tags']
       }
 
       unless alert['require_full_window'].nil?

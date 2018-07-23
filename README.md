@@ -8,6 +8,7 @@ We use a fork of AirBnB's Inteferon with the following modifications:
   * removed .travis.yml
   * in spec/spec_helper.rb, set `config.warning = true`
   * Fix bug in destinations/datadog.rb#report_stats by passing a hash to %
+  * support for adding tags to monitors
 
 ## Pulling in upstream changes ##
 1. Check for upstream changes [here](https://github.com/airbnb/interferon/commits/master).

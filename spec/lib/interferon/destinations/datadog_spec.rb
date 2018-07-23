@@ -43,6 +43,7 @@ describe Interferon::Destinations::Datadog do
       'metric' => { 'datadog_query' => 'avg:metric{*}' },
       'silenced' => {},
       'notify' => {},
+      'tags' => ['foo', 'bar'],
     }
   end
   let(:mock_people) { %w[foo bar baz] }
@@ -53,6 +54,7 @@ describe Interferon::Destinations::Datadog do
         'name' => 'Test Alert',
         'message' => 'Test Message',
         'query' => 'avg:metric{*}',
+        'tags' => ['foo', 'bar'],
         'options' => {
           'silenced' => {},
         },
