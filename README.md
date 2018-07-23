@@ -18,6 +18,11 @@ We use a fork of AirBnB's Inteferon with the following modifications:
 6. Amend the squashed commit with a bump to the .gemversion.
 7. Get code review in Gerrit like normal.
 
+## Building a new gem version ##
+1. `gem install package_cloud`
+2. `gem build interferon.gemspec`
+3. `package_cloud push instructure/internal interferon-0.3.0.pre.insops.gem`
+
 # Interferon #
 
 [![Build Status](https://travis-ci.org/airbnb/interferon.svg?branch=master)](https://travis-ci.org/airbnb/interferon)
