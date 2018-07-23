@@ -345,6 +345,7 @@ describe Interferon::Destinations::Datadog do
     'no_data_timeframe' => nil,
     'require_full_window' => nil,
     'timeout' => nil,
+    'locked' => false,
   }.freeze
 
   def mock_alert_json(name, datadog_query, message, type = 'metric alert', id = nil, options = {})
