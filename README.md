@@ -1,13 +1,22 @@
 # Instructure fork #
 We use a fork of AirBnB's Inteferon with the following modifications:
-  * changed alert key
   * alerts can be read from a multi-level directory
   * support for fallback_groups
+  * support for locked monitors
   * runs the config file through ERB for sekrits
-  * no brittle interpolation of regex in interferon_spec.rb#test_alert_from_json
   * slight gem dependency version differences
   * removed .travis.yml
   * in spec/spec_helper.rb, set `config.warning = true`
+
+## Pulling in upstream changes ##
+1. Check for upstream changes [here](https://github.com/airbnb/interferon/commits/master).
+2. Cherry-pick them one at a time, in order from oldest to newest. Skip merge commits.
+`git cherry-pick 522e7da554cad5ce31d2f4e9f085ba129f28e8fe`. If needed, fix any merge conflicts, then continue the cherry-pick with `git cherry-pick --continue`
+3. Once you have cherry-picked all the upstream commits, squash them into a single commit with `git rebase -i <sha of the commit prior to the first you cherry-picked>`
+4. Change the command for all commits but the first to `s`, use `p` for the first. Run it.
+5. Edit the commit message to follow the example of the other upstream-incorporating commits in the git history.
+6. Amend the squashed commit with a bump to the .gemversion.
+7. Get code review in Gerrit like normal.
 
 # Interferon #
 
