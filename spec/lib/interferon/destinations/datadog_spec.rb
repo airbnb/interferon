@@ -11,6 +11,7 @@ describe Interferon::Destinations::Datadog do
       'api_key' => 'TEST_API_KEY',
       'app_key' => 'TEST_APP_KEY',
       'retries' => retries,
+      'datadog_retry_base_delay' => 0
     }
   end
   let(:datadog) do
@@ -187,6 +188,77 @@ describe Interferon::Destinations::Datadog do
           message, people, notify_recovery: false
         )
       ).to include('{{^is_recovery}}')
+    end
+  end
+
+  describe '#retryable' do
+    class RetryTester
+      def foo;end
+    end
+
+    let!(:retry_tester) { RetryTester.new }
+
+    it 'completes early if successful' do
+      expect(retry_tester).to receive(:foo).once
+
+      datadog.retryable do
+        retry_tester.foo
+      end
+    end
+
+    it 'retries up to 6 times by default if error is Net::OpenTimeout' do
+      expect(retry_tester).to receive(:foo).exactly(4).times
+      allow(retry_tester).to receive(:foo).and_raise(Net::OpenTimeout)
+
+      expect do
+        datadog.retryable do
+          retry_tester.foo
+        end
+      end.to raise_error(Net::OpenTimeout)
+    end
+
+    it 'retries up to 6 times by default if error is Net::ReadTimeout' do
+      expect(retry_tester).to receive(:foo).exactly(4).times
+      allow(retry_tester).to receive(:foo).and_raise(Net::ReadTimeout)
+
+      expect do
+        datadog.retryable do
+          retry_tester.foo
+        end
+      end.to raise_error(Net::ReadTimeout)
+    end
+
+    it 'will raise any error that is not Net::Open/ReadTimout without retrying' do
+      expect(retry_tester).to receive(:foo).exactly(1).times
+      allow(retry_tester).to receive(:foo).and_raise(StandardError)
+
+      expect do
+        datadog.retryable do
+          retry_tester.foo
+        end
+      end.to raise_error(StandardError)
+    end
+
+    context 'with custom config' do
+      let(:base_datadog_config) do
+        {
+          'api_key' => 'TEST_API_KEY',
+          'app_key' => 'TEST_APP_KEY',
+          'retries' => 10,
+          'datadog_retry_base_delay' => 0
+        }
+      end
+
+      it 'retries request 10 times' do
+        expect(retry_tester).to receive(:foo).exactly(11).times
+        allow(retry_tester).to receive(:foo).and_raise(Net::OpenTimeout)
+
+        expect do
+          datadog.retryable do
+            retry_tester.foo
+          end
+        end.to raise_error(Net::OpenTimeout)
+      end
     end
   end
 end

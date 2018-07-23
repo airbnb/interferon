@@ -13,6 +13,7 @@ module Interferon::Destinations
     attr_accessor :concurrency
     attr_reader :alert_key
     ALERT_KEY = 'This alert was created via the alerts framework'.freeze
+    RETRYABLE_ERRORS = [Net::OpenTimeout, Net::ReadTimeout]
 
     def initialize(options)
       %w[app_key api_key].each do |req|
@@ -47,6 +48,9 @@ module Interferon::Destinations
 
       # configure retries
       @retries = options['retries'] || 3
+
+      # will default to about 30 seconds over 6 retries
+      @datadog_retry_base_delay = options['datadog_retry_base_delay'] || 0.3
 
       @stats = {
         alerts_created: 0,
@@ -226,18 +230,20 @@ Options:
         options: alert_options,
       }
 
-      if @dry_run
-        @dog.validate_monitor(
-          alert['monitor_type'],
-          datadog_query,
-          monitor_options
-        )
-      else
-        @dog.monitor(
-          alert['monitor_type'],
-          datadog_query,
-          monitor_options
-        )
+      retryable do
+        if @dry_run
+          @dog.validate_monitor(
+            alert['monitor_type'],
+            datadog_query,
+            monitor_options
+          )
+        else
+          @dog.monitor(
+            alert['monitor_type'],
+            datadog_query,
+            monitor_options
+          )
+        end
       end
     end
 
@@ -270,40 +276,43 @@ Options:
         options: alert_options,
       }
 
-      if @dry_run
-        resp = @dog.validate_monitor(
-          alert['monitor_type'],
-          datadog_query,
-          monitor_options
-        )
-      elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
-        resp = @dog.update_monitor(
-          id,
-          datadog_query,
-          monitor_options
-        )
-
-        # Unmute existing alerts that exceed the max silenced time
-        # Datadog does not allow updates to silencing via the update_alert API call.
-        silenced = existing_alert['options']['silenced']
-        if !@max_mute_minutes.nil?
-          silenced = silenced.values.reject do |t|
-            t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
-          end
-          @dog.unmute_monitor(id) if alert_options[:silenced].empty? && silenced.empty?
-        elsif alert_options[:silenced].empty? && !silenced.empty?
-          @dog.unmute_monitor(id)
-        end
-      else
-        # Need to recreate alert with new monitor type
-        resp = @dog.delete_monitor(id)
-        code = resp[0].to_i
-        unless code >= 300 || code == -1
-          resp = @dog.monitor(
+      resp = ''
+      retryable do
+        if @dry_run
+          resp = @dog.validate_monitor(
             alert['monitor_type'],
             datadog_query,
             monitor_options
           )
+        elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
+          resp = @dog.update_monitor(
+            id,
+            datadog_query,
+            monitor_options
+          )
+
+          # Unmute existing alerts that exceed the max silenced time
+          # Datadog does not allow updates to silencing via the update_alert API call.
+          silenced = existing_alert['options']['silenced']
+          if !@max_mute_minutes.nil?
+            silenced = silenced.values.reject do |t|
+              t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
+            end
+            @dog.unmute_monitor(id) if alert_options[:silenced].empty? && silenced.empty?
+          elsif alert_options[:silenced].empty? && !silenced.empty?
+            @dog.unmute_monitor(id)
+          end
+        else
+          # Need to recreate alert with new monitor type
+          resp = @dog.delete_monitor(id)
+          code = resp[0].to_i
+          unless code >= 300 || code == -1
+            resp = @dog.monitor(
+              alert['monitor_type'],
+              datadog_query,
+              monitor_options
+            )
+          end
         end
       end
       resp
@@ -323,7 +332,10 @@ Options:
 
     def remove_datadog_alert(alert)
       alert['id'].each do |alert_id|
-        resp = @dog.delete_monitor(alert_id)
+        resp = ''
+        retryable do
+          resp = @dog.delete_monitor(alert_id)
+        end
         code = resp[0].to_i
         log_datadog_response_code(resp, code, :deleting)
 
@@ -444,6 +456,19 @@ Options:
           statsd.gauge('datadog.api.unknown_error', 0, tags: ["alert:#{alert}"])
           statsd.gauge('datadog.api.client_error', 0, tags: ["alert:#{alert}"])
           statsd.gauge('datadog.api.success', 1, tags: ["alert:#{alert}"])
+        end
+      end
+    end
+
+    def retryable(retries=0, &block)
+      begin
+        block.call
+      rescue *RETRYABLE_ERRORS => e
+        if retries < @retries
+          sleep (2**retries * @datadog_retry_base_delay)
+          retryable(retries+1, &block)
+        else
+          raise e
         end
       end
     end
