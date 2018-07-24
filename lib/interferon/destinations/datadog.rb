@@ -398,14 +398,7 @@ MESSAGE
       log.info(
         'datadog: successfully created (%<alerts_created>d/%<alerts_to_be_created>d),' \
         'updated (%<alerts_updated>d/%<alerts_to_be_updated>d),' \
-        'and deleted (%<alerts_deleted>d/%<alerts_to_be_deleted>d) alerts' % [
-          @stats[:alerts_created],
-          @stats[:alerts_to_be_created],
-          @stats[:alerts_updated],
-          @stats[:alerts_to_be_updated],
-          @stats[:alerts_deleted],
-          @stats[:alerts_to_be_deleted],
-        ]
+        'and deleted (%<alerts_deleted>d/%<alerts_to_be_deleted>d) alerts' % @stats
       )
     end
 
