@@ -11,6 +11,7 @@ We use a fork of AirBnB's Inteferon with the following modifications:
   * support for adding tags to monitors
   * Fix bug in destinations/datadog.rb#same_alerts by stringifying thresholds hash keys
   * Add retry logic to datadog creates, updates, and removes as well as config for retries
+  * Add concurrency to host_source reads
 
 ## Pulling in upstream changes ##
 1. Check for upstream changes [here](https://github.com/airbnb/interferon/commits/master).

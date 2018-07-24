@@ -1,6 +1,7 @@
 ---
 verbose_logging: true
 alerts_repo_path: "/Users/igor47/repos/alerts"
+read_hosts_threads: 20
 group_sources:
   - type: "filesystem"
     enabled: true
