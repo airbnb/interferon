@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'erb'
 require 'yaml'
 require 'optparse'
 require 'interferon'
@@ -27,7 +28,8 @@ end
 
 def parseconfig(filename)
   begin
-    config = YAML.parse(File.read(filename))
+    e = ERB.new(File.read(filename)).result
+    config = YAML.parse(e)
   rescue Errno::ENOENT => e
     raise ArgumentError, "config file does not exist:\n#{e.inspect}"
   rescue Errno::EACCES => e
