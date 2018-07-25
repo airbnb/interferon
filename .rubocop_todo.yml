@@ -89,7 +89,10 @@ Style/FormatString:
   - sprintf
   - percent
 
-Style/MethodMissing:
+Style/MethodMissingSuper:
+  Enabled: false
+
+Style/MissingRespondToMissing:
   Enabled: false
 
 Style/MixinUsage:
