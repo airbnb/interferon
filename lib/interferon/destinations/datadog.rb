@@ -360,6 +360,16 @@ MESSAGE
         timeout_h: alert_api_json['options']['timeout_h'],
       }
 
+      # stringify keys of the thresholds hash
+      new_alert_thresholds = {}
+      if alert['thresholds'].is_a? Hash
+        alert['thresholds'].each_pair do |k,v|
+          new_alert_thresholds[k.to_s] = v
+        end
+      else
+        new_alert_thresholds = alert['thresholds']
+      end
+
       new_alert = {
         monitor_type: self.class.normalize_monitor_type(alert['monitor_type']),
         query: alert['metric']['datadog_query'],
@@ -375,7 +385,7 @@ MESSAGE
         notify_audit: alert['notify']['audit'],
         no_data_timeframe: alert['no_data_timeframe'],
         silenced: alert['silenced'],
-        thresholds: alert['thresholds'],
+        thresholds: new_alert_thresholds,
         timeout_h: alert['timeout_h'],
       }
 
