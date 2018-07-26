@@ -3,6 +3,7 @@
 module Interferon
   # lets create namespaces for things we'll be loading
   module Destinations; end
+  module AlertSources; end
   module HostSources; end
   module GroupSources; end
 
@@ -104,6 +105,14 @@ module Interferon
       @loader_for = 'destination'
       @type_path = 'destinations'
       @module = ::Interferon::Destinations
+    end
+  end
+
+  class AlertSourcesLoader < DynamicLoader
+    def initialize_attributes
+      @loader_for = 'alert source'
+      @type_path = 'alert_sources'
+      @module = ::Interferon::AlertSources
     end
   end
 

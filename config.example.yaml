@@ -1,6 +1,14 @@
 ---
 verbose_logging: true
 alerts_repo_path: "/Users/igor47/repos/alerts"
+
+alert_sources:
+  - type: "filesystem"
+    enabled: true
+    options:
+      alert_types:
+        - path: "/Users/igor47/git/repos/alerts/alerts"
+
 group_sources:
   - type: "filesystem"
     enabled: true

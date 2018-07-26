@@ -6,7 +6,7 @@ require 'interferon/version'
 
 Gem::Specification.new do |gem|
   gem.name          = 'interferon'
-  gem.version       = Interferon::VERSION
+  gem.version       = Interferon::VERSION.dup
   gem.authors       = ['Igor Serebryany', 'Jimmy Ngo']
   gem.email         = ['igor.serebryany@airbnb.com', 'jimmy.ngo@airbnb.com']
   gem.description   = %(: Store metrics alerts in code!)
