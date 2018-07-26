@@ -2,9 +2,11 @@
 
 module Interferon
   class AlertYaml < Alert
-    def initialize(path)
-      @path = path
-      @filename = File.basename(path)
+    def initialize(path, alert_file)
+      @path = alert_file.clone
+      alert_file.slice! path
+      @filename = alert_file
+
       @text = File.read(@path)
 
       @data = nil
