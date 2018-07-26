@@ -28,6 +28,7 @@ module Interferon::HostSources
 
         AWS.memoize do
           client.tables.each do |table|
+            next unless table.exists?
             hosts << {
               source: 'aws_dynamo',
               region: region,

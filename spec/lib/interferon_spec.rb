@@ -28,7 +28,7 @@ describe Interferon::Destinations::Datadog do
     end
     let(:alert_diff) do
       mock_alert_json(
-        'name2', 'testquery', json_message, 'metric_alert', [1], alert_option => different_value
+        'name2', 'testquery', json_message, 'metric alert', [1], alert_option => different_value
       )
     end
 
@@ -86,6 +86,7 @@ describe Interferon::Destinations::Datadog do
 
     context 'no_data_timeframe option' do
       it_behaves_like('alert_option', 'no_data_timeframe', nil, 60)
+      it_behaves_like('alert_option', 'no_data_timeframe', 120, 60)
     end
 
     context 'require_full_window option' do
@@ -94,22 +95,74 @@ describe Interferon::Destinations::Datadog do
 
     context 'evaluation_delay option' do
       it_behaves_like('alert_option', 'evaluation_delay', nil, 300)
+      it_behaves_like('alert_option', 'evaluation_delay', 600, 400)
     end
 
     context 'new_host_delay option' do
-      it_behaves_like('alert_option', 'new_host_delay', 400, 400)
+      it_behaves_like('alert_option', 'new_host_delay', 600, 400)
     end
 
     context 'thresholds option' do
       it_behaves_like('alert_option', 'thresholds', nil, 'critical' => 1)
+      it_behaves_like('alert_option', 'thresholds', { 'critical' => 2 }, 'critical' => 1)
+    end
+
+    context 'thresholds option with symbols' do
+      it 'converts symbols in thresholds hash keys to strings' do
+        alert = create_test_alert(
+          'name1', 'testquery', 'message', 'thresholds' => { critical: 1 }
+        )
+        alert_same = mock_alert_json(
+          'name2', 'testquery', json_message, 'metric alert',
+          [1], 'thresholds' => { 'critical' => 1 }
+        )
+        expect(datadog.same_alerts(alert, [], alert_same)).to be true
+      end
     end
 
     context 'timeout_h option' do
-      it_behaves_like('alert_option', 'timeout_h', nil, 300)
+      it_behaves_like('alert_option', 'timeout_h', nil, 3600)
     end
 
     context 'include_tags option' do
+      it_behaves_like('alert_option', 'include_tags', nil, false, 'notify' => 'include_tags')
       it_behaves_like('alert_option', 'include_tags', true, false, 'notify' => 'include_tags')
+    end
+
+    context 'renotify_interval option' do
+      it_behaves_like('alert_option', 'renotify_interval', nil, 30, 'notify' => 'renotify_interval')
+      it_behaves_like('alert_option', 'renotify_interval', 60, 30, 'notify' => 'renotify_interval')
+    end
+
+    context 'escalation_message option' do
+      it_behaves_like(
+        'alert_option', 'escalation_message', nil, '', 'notify' => 'escalation_message'
+      )
+      it_behaves_like(
+        'alert_option', 'escalation_message', 'foo', 'bar', 'notify' => 'escalation_message'
+      )
+    end
+
+    context 'notify_recovery option' do
+      it 'does not add is_recovery to the message body when true' do
+        alert = create_test_alert(
+          'name1', 'testquery', 'message', { 'notify' => 'recovery' } => true
+        )
+        alert_same = mock_alert_json(
+          'name2', 'testquery', json_message, 'metric alert', [1], {}
+        )
+        expect(datadog.same_alerts(alert, [], alert_same)).to be true
+      end
+
+      it 'adds is_recovery to the message body when false' do
+        alert = create_test_alert(
+          'name1', 'testquery', 'message', { 'notify' => 'recovery' } => false
+        )
+        alert_same = mock_alert_json(
+          'name2', 'testquery', json_message, 'metric alert', [1], {}
+        )
+        expect(datadog.same_alerts(alert, [], alert_same)).to be false
+      end
     end
 
     context 'notify_audit option' do
@@ -360,7 +413,10 @@ describe Interferon::Destinations::Datadog do
     notify_dsl = NotifyDSL.new({})
     notify_dsl.groups(['a'])
     notify_dsl.audit(options['notify' => 'audit'])
+    notify_dsl.escalation_message(options['notify' => 'escalation_message'])
     notify_dsl.include_tags(options['notify' => 'include_tags'])
+    notify_dsl.recovery(options['notify' => 'recovery'])
+    notify_dsl.renotify_interval(options['notify' => 'renotify_interval'])
 
     alert_dsl.instance_variable_set(:@notify, notify_dsl)
 

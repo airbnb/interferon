@@ -30,6 +30,15 @@ module Interferon
         instance_variable_set(field, f)
       end
     end
+
+    def stringify_keys(hash)
+      unless hash.nil?
+        hash.keys.each do |key|
+          hash[key.to_s] = hash.delete(key)
+        end
+      end
+      hash
+    end
   end
 
   class AlertDSL
@@ -48,13 +57,13 @@ module Interferon
     end
 
     def applies(v = nil, &block)
-      get_or_set(:@applies, v, block, false)
+      get_or_set(:@applies, v, block, false) { |val| val == :once ? val : !!val }
     end
 
     def silenced(v = nil, &block)
       get_or_set(:@silenced, v, block, {}) do |val|
-        if val.is_a? Hash
-          val
+        if val.is_a?(Hash)
+          stringify_keys(val)
         elsif val == true
           { '*' => nil }
         else
@@ -90,7 +99,10 @@ module Interferon
     end
 
     def thresholds(v = nil, &block)
-      get_or_set(:@thresholds, v, block, nil)
+      get_or_set(:@thresholds, v, block, nil) do |val|
+        stringify_keys(val) if val.is_a?(Hash)
+        val
+      end
     end
 
     def evaluation_delay(v = nil, &block)
@@ -139,6 +151,14 @@ module Interferon
 
     def include_tags(v = nil, &block)
       get_or_set(:@include_tags, v, block, nil)
+    end
+
+    def renotify_interval(v = nil, &block)
+      get_or_set(:@renotify_interval, v, block, nil)
+    end
+
+    def escalation_message(v = nil, &block)
+      get_or_set(:@escalation_message, v, block, nil)
     end
   end
 

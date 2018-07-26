@@ -159,6 +159,14 @@ module Interferon::Destinations
         alert_options[:include_tags] = alert['notify']['include_tags']
       end
 
+      unless alert['notify']['renotify_interval'].nil?
+        alert_options[:renotify_interval] = alert['notify']['renotify_interval']
+      end
+
+      unless alert['notify']['escalation_message'].nil?
+        alert_options[:escalation_message] = alert['notify']['escalation_message']
+      end
+
       unless alert['evaluation_delay'].nil?
         alert_options[:evaluation_delay] = alert['evaluation_delay']
       end
@@ -209,7 +217,7 @@ Message:
 #{message}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       log.info("creating new alert #{alert['name']}: #{new_alert_text}")
 
       monitor_options = {
@@ -244,7 +252,7 @@ Message:
 #{message.strip}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       existing_alert_text = <<-MESSAGE.strip
 Query:
 #{existing_alert['query'].strip}
@@ -252,7 +260,7 @@ Message:
 #{existing_alert['message'].strip}
 Options:
 #{alert_options}
-MESSAGE
+      MESSAGE
       diff = Diffy::Diff.new(existing_alert_text, new_alert_text, context: 1)
       log.info("updating existing alert #{id} (#{alert['name']}):\n#{diff}")
 
@@ -349,12 +357,14 @@ MESSAGE
         monitor_type: self.class.normalize_monitor_type(alert_api_json['type']),
         query: alert_api_json['query'].strip,
         message: alert_api_json['message'].strip,
+        escalation_message: alert_api_json['options']['escalation_message'],
         evaluation_delay: alert_api_json['options']['evaluation_delay'],
         new_host_delay: alert_api_json['options']['new_host_delay'],
         include_tags: alert_api_json['options']['include_tags'],
         notify_no_data: alert_api_json['options']['notify_no_data'],
         notify_audit: alert_api_json['options']['notify_audit'],
         no_data_timeframe: alert_api_json['options']['no_data_timeframe'],
+        renotify_interval: alert_api_json['options']['renotify_interval'],
         silenced: alert_api_json['options']['silenced'],
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
@@ -368,12 +378,14 @@ MESSAGE
           people,
           notify_recovery: alert['notify']['recovery']
         ).strip,
+        escalation_message: alert['notify']['escalation_message'],
         evaluation_delay: alert['evaluation_delay'],
         new_host_delay: alert['new_host_delay'],
         include_tags: alert['notify']['include_tags'],
         notify_no_data: alert['notify_no_data'],
         notify_audit: alert['notify']['audit'],
         no_data_timeframe: alert['no_data_timeframe'],
+        renotify_interval: alert['notify']['renotify_interval'],
         silenced: alert['silenced'],
         thresholds: alert['thresholds'],
         timeout_h: alert['timeout_h'],
@@ -395,14 +407,7 @@ MESSAGE
       log.info(
         'datadog: successfully created (%<alerts_created>d/%<alerts_to_be_created>d),' \
         'updated (%<alerts_updated>d/%<alerts_to_be_updated>d),' \
-        'and deleted (%<alerts_deleted>d/%<alerts_to_be_deleted>d) alerts' % [
-          @stats[:alerts_created],
-          @stats[:alerts_to_be_created],
-          @stats[:alerts_updated],
-          @stats[:alerts_to_be_updated],
-          @stats[:alerts_deleted],
-          @stats[:alerts_to_be_deleted],
-        ]
+        'and deleted (%<alerts_deleted>d/%<alerts_to_be_deleted>d) alerts' % @stats
       )
     end
 

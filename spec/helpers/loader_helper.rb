@@ -1,4 +1,3 @@
-
 # frozen_string_literal: true
 
 ### some helpers to make this work ###
