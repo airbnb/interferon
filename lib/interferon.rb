@@ -31,6 +31,7 @@ module Interferon
       @host_sources = config['host_sources']
       @destinations = config['destinations']
       @processes = config['processes']
+      @read_hosts_threads = config['read_hosts_threads'] || 0
       @dry_run = dry_run
       @request_shutdown = false
     end
@@ -133,15 +134,15 @@ module Interferon
     def read_hosts(sources)
       statsd.gauge('hosts.sources', sources.count)
 
-      hosts = []
       loader = HostSourcesLoader.new([@alerts_repo_path])
-      loader.get_all(sources).each do |source|
-        break if @request_shutdown
+      hosts = Parallel.map(loader.get_all(sources), in_threads: @read_hosts_threads) do |source|
+        raise Parallel::Kill if @request_shutdown
         source_hosts = source.list_hosts
-        hosts << source_hosts
 
         statsd.gauge('hosts.count', source_hosts.count, tags: ["source:#{source.class.name}"])
-        log.info("read #{source_hosts.count} hosts from source #{source.class.name}")
+        log.info("Thread ##{Parallel.worker_number} --  " \
+                 "read #{source_hosts.count} hosts from source #{source.class.name}")
+        source_hosts
       end
 
       hosts.flatten!
