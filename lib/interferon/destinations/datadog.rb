@@ -155,6 +155,9 @@ module Interferon::Destinations
         timeout_h: alert['timeout_h'],
       }
 
+      # Force notify_audit to false when dry-run
+      alert_options[:notify_audit] = false if @dry_run
+
       unless alert['notify']['include_tags'].nil?
         alert_options[:include_tags] = alert['notify']['include_tags']
       end
