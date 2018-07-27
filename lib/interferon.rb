@@ -140,7 +140,8 @@ module Interferon
         source_hosts = source.list_hosts
 
         statsd.gauge('hosts.count', source_hosts.count, tags: ["source:#{source.class.name}"])
-        log.info("Thread ##{Parallel.worker_number} --  read #{source_hosts.count} hosts from source #{source.class.name}")
+        log.info("Thread ##{Parallel.worker_number} --  " \
+                 "read #{source_hosts.count} hosts from source #{source.class.name}")
         source_hosts
       end
 
