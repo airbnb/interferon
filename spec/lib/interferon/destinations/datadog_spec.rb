@@ -11,7 +11,7 @@ describe Interferon::Destinations::Datadog do
       'api_key' => 'TEST_API_KEY',
       'app_key' => 'TEST_APP_KEY',
       'retries' => retries,
-      'datadog_retry_base_delay' => 0
+      'datadog_retry_base_delay' => 0,
     }
   end
   let(:datadog) do
@@ -193,7 +193,7 @@ describe Interferon::Destinations::Datadog do
 
   describe '#retryable' do
     class RetryTester
-      def foo;end
+      def foo; end
     end
 
     let!(:retry_tester) { RetryTester.new }
@@ -245,7 +245,7 @@ describe Interferon::Destinations::Datadog do
           'api_key' => 'TEST_API_KEY',
           'app_key' => 'TEST_APP_KEY',
           'retries' => 10,
-          'datadog_retry_base_delay' => 0
+          'datadog_retry_base_delay' => 0,
         }
       end
 

@@ -13,7 +13,7 @@ module Interferon::Destinations
     attr_accessor :concurrency
     attr_reader :alert_key
     ALERT_KEY = 'This alert was created via the alerts framework'.freeze
-    RETRYABLE_ERRORS = [Net::OpenTimeout, Net::ReadTimeout]
+    RETRYABLE_ERRORS = [Net::OpenTimeout, Net::ReadTimeout].freeze
 
     def initialize(options)
       %w[app_key api_key].each do |req|
@@ -460,17 +460,13 @@ Options:
       end
     end
 
-    def retryable(retries=0, &block)
-      begin
-        block.call
-      rescue *RETRYABLE_ERRORS => e
-        if retries < @retries
-          sleep (2**retries * @datadog_retry_base_delay)
-          retryable(retries+1, &block)
-        else
-          raise e
-        end
-      end
+    def retryable(retries = 0, &block)
+      yield
+    rescue *RETRYABLE_ERRORS => e
+      raise e unless retries < @retries
+
+      sleep(2**retries * @datadog_retry_base_delay)
+      retryable(retries + 1, &block)
     end
   end
 end
