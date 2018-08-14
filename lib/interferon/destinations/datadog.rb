@@ -177,6 +177,8 @@ module Interferon::Destinations
 
       alert_options[:thresholds] = alert['thresholds'] unless alert['thresholds'].nil?
 
+      alert_options[:renotify_interval] = alert['renotify_interval'] unless alert['renotify_interval'].nil?
+
       tags = []
       unless alert['tags'].nil?
         tags = alert['tags']
@@ -386,6 +388,7 @@ MESSAGE
         thresholds: alert_api_json['options']['thresholds'],
         timeout_h: alert_api_json['options']['timeout_h'],
         locked: alert_api_json['options']['locked'],
+        renotify_interval: alert_api_json['options']['renotify_interval'],
         tags: alert_api_json['tags'],
       }
 
@@ -417,6 +420,7 @@ MESSAGE
         thresholds: new_alert_thresholds,
         timeout_h: alert['timeout_h'],
         locked: alert['locked'],
+        renotify_interval: alert['renotify_interval'],
         tags: alert['tags']
       }
 

@@ -93,6 +93,10 @@ module Interferon
       timeout ? [1, timeout.to_i / 3600].max : nil
     end
 
+    def renotify_interval(v = nil, &block)
+      get_or_set(:@renotify_interval, v, block, nil)
+    end
+
     def thresholds(v = nil, &block)
       get_or_set(:@thresholds, v, block, nil)
     end
