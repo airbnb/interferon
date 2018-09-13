@@ -19,16 +19,18 @@ describe Interferon::Destinations::Datadog do
     let(:json_message) { 'message' + "\n#{datadog.alert_key}" }
     let(:alert) do
       alert_dsl_path = alert_dsl.nil? ? alert_option : alert_dsl
-      create_test_alert('name1', 'testquery', 'message', alert_dsl_path => same_value)
+      create_test_alert('name1', 'testquery', 'message', ['tag1'], alert_dsl_path => same_value)
     end
     let(:alert_same) do
       mock_alert_json(
-        'name2', 'testquery', json_message, 'metric alert', [1], alert_option => same_value
+        'name2', 'testquery', json_message, 'metric alert',
+        [1], ['tag1'], alert_option => same_value
       )
     end
     let(:alert_diff) do
       mock_alert_json(
-        'name2', 'testquery', json_message, 'metric alert', [1], alert_option => different_value
+        'name2', 'testquery', json_message, 'metric_alert',
+        [1], ['tag1'], alert_option => different_value
       )
     end
 
@@ -76,6 +78,13 @@ describe Interferon::Destinations::Datadog do
       expect(datadog.same_alerts(alert1, [], alert2)).to be false
     end
 
+    it 'detects a change if datadog tags are different' do
+      alert1 = create_test_alert('name1', 'testquery1', 'message', ['tag1'])
+      alert2 = mock_alert_json('name2', 'testquery1', json_message, ['tag2'])
+
+      expect(datadog.same_alerts(alert1, [], alert2)).to be false
+    end
+
     context 'notify_no_data option' do
       it_behaves_like('alert_option', 'notify_no_data', true, false)
     end
@@ -110,11 +119,11 @@ describe Interferon::Destinations::Datadog do
     context 'thresholds option with symbols' do
       it 'converts symbols in thresholds hash keys to strings' do
         alert = create_test_alert(
-          'name1', 'testquery', 'message', 'thresholds' => { critical: 1 }
+          'name1', 'testquery', 'message', [], 'thresholds' => { critical: 1 }
         )
         alert_same = mock_alert_json(
           'name2', 'testquery', json_message, 'metric alert',
-          [1], 'thresholds' => { 'critical' => 1 }
+          [1], [], 'thresholds' => { 'critical' => 1 }
         )
         expect(datadog.same_alerts(alert, [], alert_same)).to be true
       end
@@ -146,10 +155,10 @@ describe Interferon::Destinations::Datadog do
     context 'notify_recovery option' do
       it 'does not add is_recovery to the message body when true' do
         alert = create_test_alert(
-          'name1', 'testquery', 'message', { 'notify' => 'recovery' } => true
+          'name1', 'testquery', 'message', [], { 'notify' => 'recovery' } => true
         )
         alert_same = mock_alert_json(
-          'name2', 'testquery', json_message, 'metric alert', [1], {}
+          'name2', 'testquery', json_message, 'metric alert', [1], [], {}
         )
         expect(datadog.same_alerts(alert, [], alert_same)).to be true
       end
@@ -170,9 +179,11 @@ describe Interferon::Destinations::Datadog do
     end
 
     it 'detects no change if alert silenced is true compared to wildcard hash' do
-      alert1 = create_test_alert('name1', 'testquery', 'message', 'silenced' => true)
+      alert1 = create_test_alert('name1', 'testquery',
+                                 'message', ['tag1'], 'silenced' => true)
       alert2 = mock_alert_json(
-        'name2', 'testquery', json_message, 'metric alert', [1], 'silenced' => { '*' => nil }
+        'name2', 'testquery', json_message, 'metric alert',
+        [1], ['tag1'], 'silenced' => { '*' => nil }
       )
 
       expect(datadog.same_alerts(alert1, [], alert2)).to be true
@@ -381,7 +392,8 @@ describe Interferon::Destinations::Datadog do
     'locked' => false,
   }.freeze
 
-  def mock_alert_json(name, datadog_query, message, type = 'metric alert', id = nil, options = {})
+  def mock_alert_json(name, datadog_query, message, type = 'metric alert',
+                      id = nil, tags = [], options = {})
     options = DEFAULT_OPTIONS.merge(options)
     {
       'name' => name,
@@ -390,6 +402,7 @@ describe Interferon::Destinations::Datadog do
       'message' => message,
       'id' => id.nil? ? [name[-1]] : id,
       'options' => options,
+      'tags' => tags,
     }
   end
 
@@ -398,11 +411,12 @@ describe Interferon::Destinations::Datadog do
       mock_alert_json['name'],
       mock_alert_json['query'],
       mock_alert_json['message'].sub(/#{datadog.alert_key}$/, ''),
+      mock_alert_json['tags'],
       mock_alert_json['options']
     )
   end
 
-  def create_test_alert(name, datadog_query, message, options = {})
+  def create_test_alert(name, datadog_query, message, tags = [], options = {})
     options = DEFAULT_OPTIONS.merge(options)
 
     alert_dsl = AlertDSL.new({})
@@ -434,6 +448,7 @@ describe Interferon::Destinations::Datadog do
     alert_dsl.thresholds(options['thresholds'])
     alert_dsl.timeout(options['timeout'])
     alert_dsl.silenced(options['silenced'])
+    alert_dsl.tags(tags)
 
     MockAlert.new(alert_dsl)
   end
