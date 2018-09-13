@@ -48,3 +48,5 @@ destinations:
       max_mute_minutes: 20160 # 14 days
       # Optional. If not specified the alert_key will default to this value.
       alert_key: "This alert was created via the alerts framework"
+      retries: 3
+      retry_base_delay: 0.3
