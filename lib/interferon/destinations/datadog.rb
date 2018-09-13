@@ -50,7 +50,7 @@ module Interferon::Destinations
       @retries = options['retries'] || 3
 
       # will default to about 30 seconds over 6 retries
-      @datadog_retry_base_delay = options['datadog_retry_base_delay'] || 0.3
+      @retry_base_delay = options['retry_base_delay'] || 0.3
 
       @stats = {
         alerts_created: 0,
@@ -277,36 +277,47 @@ Options:
       }
 
       resp = ''
-      retryable do
-        if @dry_run
+      if @dry_run
+        retryable do
           resp = @dog.validate_monitor(
             alert['monitor_type'],
             datadog_query,
             monitor_options
           )
-        elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
+        end
+      elsif self.class.same_monitor_type(alert['monitor_type'], existing_alert['type'])
+        retryable do
           resp = @dog.update_monitor(
             id,
             datadog_query,
             monitor_options
           )
+        end
 
-          # Unmute existing alerts that exceed the max silenced time
-          # Datadog does not allow updates to silencing via the update_alert API call.
-          silenced = existing_alert['options']['silenced']
-          if !@max_mute_minutes.nil?
-            silenced = silenced.values.reject do |t|
-              t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
-            end
+        # Unmute existing alerts that exceed the max silenced time
+        # Datadog does not allow updates to silencing via the update_alert API call.
+        silenced = existing_alert['options']['silenced']
+        if !@max_mute_minutes.nil?
+          silenced = silenced.values.reject do |t|
+            t.nil? || t == '*' || t > Time.now.to_i + @max_mute_minutes * 60
+          end
+          retryable do
             @dog.unmute_monitor(id) if alert_options[:silenced].empty? && silenced.empty?
-          elsif alert_options[:silenced].empty? && !silenced.empty?
+          end
+        elsif alert_options[:silenced].empty? && !silenced.empty?
+          retryable do
             @dog.unmute_monitor(id)
           end
-        else
-          # Need to recreate alert with new monitor type
+        end
+      else
+        # Need to recreate alert with new monitor type
+        retryable do
           resp = @dog.delete_monitor(id)
-          code = resp[0].to_i
-          unless code >= 300 || code == -1
+        end
+
+        code = resp[0].to_i
+        unless code >= 300 || code == -1
+          retryable do
             resp = @dog.monitor(
               alert['monitor_type'],
               datadog_query,
@@ -465,7 +476,7 @@ Options:
     rescue *RETRYABLE_ERRORS => e
       raise e unless retries < @retries
 
-      sleep(2**retries * @datadog_retry_base_delay)
+      sleep(2**retries * @retry_base_delay)
       retryable(retries + 1, &block)
     end
   end
