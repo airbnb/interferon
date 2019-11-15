@@ -85,19 +85,27 @@ module Interferon::Destinations
     def fetch_existing_alerts
       alerts = Queue.new
       has_more = true
+      last_monitor_id = nil
 
       Parallel.map_with_index(-> { has_more || Parallel::Stop },
                               in_threads: @concurrency) do |_, page|
         successful = false
         @retries.downto(0) do
-          resp = @dog.get_all_monitors(page: page, page_size: @page_size)
+          options = {page_size: @page_size}
+          unless last_monitor_id.nil?
+            options['id_offset'] = last_monitor_id
+          end
+          resp = @dog.get_all_monitors(options)
           code = resp[0].to_i
           if code != 200
             log.info("Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}")
           else
             alerts_page = resp[1]
             has_more = false if alerts_page.length < @page_size
-            alerts_page.map { |alert| alerts.push(alert) }
+            alerts_page.map { |alert|
+              alerts.push(alert)
+              last_monitor_id = alert['id']
+            }
             successful = true
             break
           end
