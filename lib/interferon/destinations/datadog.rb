@@ -85,16 +85,12 @@ module Interferon::Destinations
     def fetch_existing_alerts
       alerts = Queue.new
       has_more = true
-      last_monitor_id = nil
+      last_monitor_id = 0
 
-      Parallel.map_with_index(-> { has_more || Parallel::Stop },
-                              in_threads: @concurrency) do |_, page|
+      while has_more do
         successful = false
         @retries.downto(0) do
-          options = {page_size: @page_size}
-          unless last_monitor_id.nil?
-            options['id_offset'] = last_monitor_id
-          end
+          options = {page_size: @page_size, id_offset: last_monitor_id}
           resp = @dog.get_all_monitors(options)
           code = resp[0].to_i
           if code != 200
