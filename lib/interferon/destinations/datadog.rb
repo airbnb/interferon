@@ -83,7 +83,7 @@ module Interferon::Destinations
     end
 
     def _fetch_existing_alerts_boundaries
-      # we need to
+      # we need to obtain the monitor id boundary conditions
       start_monitor, end_monitor = nil, nil
 
       # Get first monitor
