@@ -550,7 +550,7 @@ Options:
           break
         end
 
-        log.info("Failed to retrieve end monitor from datadog. #{code}: #{resp[1].inspect}")
+        log.info("Failed to retrieve end monitor from datadog. #{code}: #{monitors.inspect}")
       end
 
       raise 'Unable to find last monitor id' if end_monitor.nil?
