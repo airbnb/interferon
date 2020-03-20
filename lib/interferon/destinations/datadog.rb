@@ -84,30 +84,52 @@ module Interferon::Destinations
 
     def fetch_existing_alerts
       alerts = Queue.new
-      has_more = true
+      start_monitor, end_monitor = fetch_existing_alerts_boundaries
 
-      Parallel.map_with_index(-> { has_more || Parallel::Stop },
-                              in_threads: @concurrency) do |_, page|
+      # Edge case where they are equal.
+      return [start_monitor] if start_monitor['id'] == end_monitor['id']
+
+      # Another easy edge case when the span is like: monitor ids: [1, 2]
+      return [start_monitor, end_monitor] if end_monitor['id'] - start_monitor['id'] == 1
+
+      # Note: inclusive range is important here.
+      range = (start_monitor['id']...end_monitor['id'])
+
+      # Split this in divide and conquer-style. Build the ranges to iterate on in parallel to merge.
+      # Build a list of queries for `id_offset=<id>` for which we can run concurrent requests with
+      # consistent latency characteristics.
+      queries = []
+
+      range.step(@page_size) { |i| queries.push(i) }
+      Parallel.map(queries, in_threads: @concurrency) do |start_monitor_id|
         successful = false
         @retries.downto(0) do
-          resp = @dog.get_all_monitors(page: page, page_size: @page_size)
-          code = resp[0].to_i
-          if code != 200
-            log.info("Failed to retrieve existing alerts from datadog. #{code}: #{resp[1].inspect}")
-          else
-            alerts_page = resp[1]
-            has_more = false if alerts_page.length < @page_size
-            alerts_page.map { |alert| alerts.push(alert) }
+          options = { page_size: @page_size, id_offset: start_monitor_id, sort: 'ASC' }
+          code, alerts_page = @dog.get_all_monitors(options)
+
+          if code == 200
+            alerts_page.each { |alert| alerts.push(alert) }
             successful = true
             break
           end
+
+          log.info(
+            <<-LOG_LINE
+              Failed to retrieve existing alerts from datadog on id_offset=#{start_monitor_id}
+              page_size=#{@page_size}. #{code}: #{alerts_page.inspect}
+            LOG_LINE
+          )
         end
 
-        unless successful
-          # Out of retries
-          raise 'Retries exceeded for fetching data from datadog.'
-        end
+        next if successful
+
+        # Out of retries
+        raise <<-EXCEPTION_LINE
+          Retries exceeded for fetching data from datadog on id_offset=#{start_monitor_id}
+          page_size=#{@page_size}
+        EXCEPTION_LINE
       end
+
       Array.new(alerts.size) { alerts.pop }
     end
 
@@ -494,6 +516,46 @@ Options:
 
       sleep(2**retries * @retry_base_delay)
       retryable(retries + 1, &block)
+    end
+
+    private
+
+    def fetch_existing_alerts_boundaries
+      # We need to obtain the monitor id boundary conditions.
+      start_monitor = nil
+      end_monitor = nil
+
+      # Get the first monitor.
+      @retries.downto(0) do
+        options = { page_size: 1, sort: 'ASC' }
+        code, monitors = @dog.get_all_monitors(options)
+
+        if code == 200 && !monitors.empty?
+          start_monitor = monitors[0]
+          break
+        end
+
+        log.info("Failed to retrieve start monitor from datadog. #{code}: #{monitors.inspect}")
+      end
+
+      raise 'Unable to find first monitor' if start_monitor.nil?
+
+      # Get the last monitor.
+      @retries.downto(0) do
+        options = { page_size: 1, sort: 'DESC' }
+        code, monitors = @dog.get_all_monitors(options)
+
+        if code == 200 && !monitors.empty?
+          end_monitor = monitors[0]
+          break
+        end
+
+        log.info("Failed to retrieve end monitor from datadog. #{code}: #{monitors.inspect}")
+      end
+
+      raise 'Unable to find last monitor id' if end_monitor.nil?
+
+      [start_monitor, end_monitor]
     end
   end
 end

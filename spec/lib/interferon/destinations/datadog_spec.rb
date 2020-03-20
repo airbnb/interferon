@@ -63,9 +63,29 @@ describe Interferon::Destinations::Datadog do
     }
   end
 
+  let(:mock_alerts) do
+    (0..100).map { |i| mock_alert.merge('id' => i) }
+  end
+
+  let(:mock_last_alert) do
+    {
+      'id' => mock_alert_id + 2,
+      'name' => 'Test Alert',
+      'message' => 'Test Message',
+      'metric' => { 'datadog_query' => 'avg:metric{*}' },
+      'silenced' => {},
+      'notify' => {},
+      'tags' => %w[foo bar],
+    }
+  end
+
   describe '.fetch_existing_alerts' do
     it 'calls dogapi get_all_monitors' do
-      expect_any_instance_of(Dogapi::Client).to receive(:get_all_monitors).and_return([200, []])
+      expect_any_instance_of(Dogapi::Client).to receive(:get_all_monitors).and_return(
+        [200, [mock_alerts[0]]],
+        [200, [mock_alerts[-1]]],
+        [200, mock_alerts]
+      )
       datadog.fetch_existing_alerts
     end
   end
